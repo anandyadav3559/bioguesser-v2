@@ -16,7 +16,7 @@ import psycopg
 from psycopg.types.json import Json
 import os
 import dotenv
-import wikipediaapi
+
 
 dotenv.load_dotenv()
 
@@ -30,7 +30,11 @@ logger = logging.getLogger(__name__)
 
 # ===================== CONFIG =====================
 
+# ===================== CONFIG =====================
+
 INATURALIST_URL = "https://api.inaturalist.org/v1/observations"
+NINJA_API_URL = "https://api.api-ninjas.com/v1/animals"
+NINJA_API_KEY = os.getenv("API_NINJAS_KEY")
 
 PER_PAGE = 200
 MAX_PAGES = 10
@@ -44,13 +48,6 @@ DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
     "port": os.getenv("DB_PORT")
 }
-
-# The user_agent is required by Wikipedia's terms of service
-wiki = wikipediaapi.Wikipedia(
-    user_agent='BioGeoguesserProject/1.0 (contact: [EMAIL_ADDRESS])',
-    language='en',
-    extract_format=wikipediaapi.ExtractFormat.WIKI
-)
 
 # ===================== DB HELPERS =====================
 
@@ -70,7 +67,7 @@ async def animal_exists(conn, scientific_name):
         )
         return await cur.fetchone() is not None
 
-async def insert_animal(conn, animal_id, name, scientific_name, image_url, locations, fact):
+async def insert_animal(conn, animal_id, name, scientific_name, image_url, locations, kingdom, class_name, avg_age, size, weight):
     async with conn.cursor() as cur:
         await cur.execute(
             """
@@ -80,9 +77,13 @@ async def insert_animal(conn, animal_id, name, scientific_name, image_url, locat
                 scientific_name,
                 image_url,
                 locations,
-                fact
+                kingdom,
+                class,
+                average_age,
+                size,
+                weight
             )
-            VALUES (%s, %s, %s, %s, %s, %s);
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """,
             (
                 animal_id,
@@ -90,7 +91,11 @@ async def insert_animal(conn, animal_id, name, scientific_name, image_url, locat
                 scientific_name,
                 image_url,
                 Json(locations),
-                fact
+                kingdom,
+                class_name,
+                avg_age,
+                size,
+                weight
             )
         )
     await conn.commit()
@@ -144,18 +149,40 @@ def extract_image_url(result):
         return photos[0]["url"].replace("square", "medium")
     return None
 
-def get_wiki_fact(scientific_name):
+async def fetch_animal_details(session, name: str):
+    """Fetch animal details from Ninja API."""
+    headers = {"X-Api-Key": NINJA_API_KEY}
+    params = {"name": name}
+
     try:
-        page = wiki.page(scientific_name)
-        if page.exists():
-            # Get the first two sentences of the summary
-            summary = page.summary.split('. ')
-            fact = ". ".join(summary[:2]) + "."
-            return fact
-        return f"{scientific_name} is a fascinating species found in diverse ecosystems."
+        async with session.get(NINJA_API_URL, headers=headers, params=params, timeout=15) as resp:
+            if resp.status != 200:
+                logger.warning(f"Ninja API error for {name}: HTTP {resp.status}")
+                return None
+            
+            data = await resp.json()
+            if not data:
+                logger.warning(f"Ninja API: no data for {name}")
+                return None
+            
+            # Use the first result
+            raw = data[0]
+            characteristics = raw.get("characteristics", {})
+            taxonomy = raw.get("taxonomy", {})
+            
+            size = characteristics.get("length", characteristics.get("height", "Unknown"))
+            
+            return {
+                "kingdom": taxonomy.get("kingdom"),
+                "class": taxonomy.get("class"),
+                "average_age": characteristics.get("lifespan"),
+                "size": size,
+                "weight": characteristics.get("weight")
+            }
+            
     except Exception as e:
-        logger.error(f"Wiki lookup failed: {e}")
-        return "Species data currently being updated."
+        logger.error(f"Error fetching details for {name}: {e}")
+        return None
 
 # ===================== MAIN INGESTION =====================
 
@@ -175,6 +202,10 @@ async def ingest_animal(input_name):
     image_url = None
     scientific_name = None
     common_name = None
+    
+    # New fields
+    animal_details = None
+    
     page = 1
     
     try:
@@ -211,9 +242,31 @@ async def ingest_animal(input_name):
                         
                         logger.info(f"Resolved Taxon: Common='{common_name}', Scientific='{scientific_name}'")
                         
-                        # Get Fact
-                        fact = get_wiki_fact(scientific_name)
-                        logger.info(f"Fetched fact: {fact[:50]}...")
+                        # Get Details from Ninja API
+                        # Try common name first, if looks like a good name, otherwise assume scientific?
+                        # Ninja API usually works better with common names like "Lion" than "Panthera leo",
+                        # but "Panthera leo" might work too. Let's try common name first.
+                        search_name = common_name if common_name else scientific_name
+                        animal_details = await fetch_animal_details(session, search_name)
+                        
+                        if not animal_details:
+                            # Fallback to input_name if common_name lookup failed
+                             animal_details = await fetch_animal_details(session, input_name)
+
+                        if animal_details:
+                           logger.info(f"Fetched details for {search_name}")
+                        else:
+                           logger.warning(f"Could not fetch details for {search_name}")
+                           # We proceed even if details are missing? 
+                           # Or should we abort? The requirement implies we want this data.
+                           # Let's fill with None for now so we don't crash, or maybe "Unknown"
+                           animal_details = {
+                               "kingdom": None,
+                               "class": None,
+                               "average_age": None,
+                               "size": None,
+                               "weight": None
+                           }
 
                     # Extract Location
                     loc = extract_location(r)
@@ -251,7 +304,19 @@ async def ingest_animal(input_name):
             
         animal_id = str(uuid.uuid4())
         
-        await insert_animal(conn, animal_id, common_name, scientific_name, image_url, locations, fact)
+        await insert_animal(
+            conn, 
+            animal_id, 
+            common_name, 
+            scientific_name, 
+            image_url, 
+            locations, 
+            animal_details["kingdom"],
+            animal_details["class"],
+            animal_details["average_age"],
+            animal_details["size"],
+            animal_details["weight"]
+        )
         
         logger.info(
             f"DONE: Inserted '{common_name}' ({scientific_name}) with {len(locations)} points. "
