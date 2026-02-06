@@ -4,7 +4,6 @@
 #     "psycopg[binary]",
 #     "aiohttp",
 #     "python-dotenv",
-#     "wikipedia-api",
 # ]
 # ///
 
