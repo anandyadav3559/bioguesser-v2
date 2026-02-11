@@ -1,16 +1,46 @@
-# React + Vite
+# Frontend Documentation
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend is a **React** application built with **Vite**.
 
-Currently, two official plugins are available:
+## Tech Stack
+-   **Framework**: React 18+
+-   **Build Tool**: Vite
+-   **Routing**: React Router DOM
+-   **HTTP Client**: Axios
+-   **Auth**: @react-oauth/google
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Setup
 
-## React Compiler
+1.  **Environment Variables**:
+    Create `.env` in `frontend/frontend/`:
+    ```env
+    VITE_API_BASE_URL=http://localhost:8000/api
+    VITE_GOOGLE_CLIENT_ID=your-google-client-id
+    ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+2.  **Dependencies**:
+    ```bash
+    npm install
+    ```
 
-## Expanding the ESLint configuration
+3.  **Run Dev Server**:
+    ```bash
+    npm run dev
+    ```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Project Structure
+
+-   `src/App.jsx`: Main routing logic (`/`, `/home`).
+-   `src/api.js`: configured Axios instance with interceptors for attaching JWT and Guest tokens.
+-   `src/pages/`:
+    -   `LoginPage.jsx`: Guest Login & Google Sign-In logic.
+    -   `HomePage.jsx`: Protected landing page with Logout.
+
+## Authentication Flow
+
+1.  **Login**: User clicks "Guest" or "Google Login".
+2.  **Request**: `api.post('/auth/guest/')` or `/auth/google/`.
+3.  **Storage**: Frontend receives `access`, `user_id`, `identity_type` and stores them in `localStorage`.
+4.  **Interceptors**: `api.js` automatically attaches `Authorization: Bearer <token>` to all subsequent requests.
+5.  **Protection**: `ProtectedRoute` in `App.jsx` redirects unauthenticated users to `/`.
+6.  **Logout**: Calls backend `/auth/logout/` then clears `localStorage`.
