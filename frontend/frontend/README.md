@@ -1,46 +1,78 @@
 # Frontend Documentation
 
-The frontend is a **React** application built with **Vite**.
+The frontend for Bio-Geoguesser V2, built with **React** and **Vite**.
 
-## Tech Stack
--   **Framework**: React 18+
--   **Build Tool**: Vite
--   **Routing**: React Router DOM
+## 💻 Tech Stack
+
+-   **Core**: React 18, Vite
+-   **Routing**: React Router DOM v6
 -   **HTTP Client**: Axios
--   **Auth**: @react-oauth/google
+-   **Authentication**: @react-oauth/google
+-   **Styling**: CSS Modules / Vanilla CSS (Tailored for performance)
 
-## Setup
+## 🚀 Getting Started
 
-1.  **Environment Variables**:
-    Create `.env` in `frontend/frontend/`:
-    ```env
-    VITE_API_BASE_URL=http://localhost:8000/api
-    VITE_GOOGLE_CLIENT_ID=your-google-client-id
-    ```
+### 1. Installation
 
-2.  **Dependencies**:
-    ```bash
-    npm install
-    ```
+Navigate to the frontend directory:
+```bash
+cd frontend/frontend
+npm install
+```
 
-3.  **Run Dev Server**:
-    ```bash
-    npm run dev
-    ```
+### 2. Environment Configuration
 
-## Project Structure
+Create a `.env` file in `frontend/frontend/`:
 
--   `src/App.jsx`: Main routing logic (`/`, `/home`).
--   `src/api.js`: configured Axios instance with interceptors for attaching JWT and Guest tokens.
--   `src/pages/`:
-    -   `LoginPage.jsx`: Guest Login & Google Sign-In logic.
-    -   `HomePage.jsx`: Protected landing page with Logout.
+```ini
+# Base URL for the Backend API
+VITE_API_BASE_URL=http://localhost:8000/api
 
-## Authentication Flow
+# Google OAuth Client ID (Must match the one in Backend)
+# Get one from https://console.cloud.google.com/
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
+```
 
-1.  **Login**: User clicks "Guest" or "Google Login".
-2.  **Request**: `api.post('/auth/guest/')` or `/auth/google/`.
-3.  **Storage**: Frontend receives `access`, `user_id`, `identity_type` and stores them in `localStorage`.
-4.  **Interceptors**: `api.js` automatically attaches `Authorization: Bearer <token>` to all subsequent requests.
-5.  **Protection**: `ProtectedRoute` in `App.jsx` redirects unauthenticated users to `/`.
-6.  **Logout**: Calls backend `/auth/logout/` then clears `localStorage`.
+### 3. Development Server
+
+Run the development server with hot-reload:
+
+```bash
+npm run dev
+```
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### 4. Build for Production
+
+```bash
+npm run build
+```
+The output will be in the `dist/` directory.
+
+## 📂 Project Structure
+
+```text
+src/
+├── assets/         # Static assets (images, icons)
+├── components/     # Reusable UI components (Buttons, Inputs, Modals)
+├── pages/          # Page components (routed views)
+│   ├── HomePage.jsx   # Main game dashboard
+│   ├── LoginPage.jsx  # Auth entry point
+├── services/       # API service functions
+│   ├── api.js      # Axios instance with interceptors
+├── App.jsx         # Main App component & Routing
+├── main.jsx        # Entry point
+```
+
+## 🔐 Auth Integration
+
+The frontend handles authentication tokens using `localStorage` (for simplicity in v2, consider `httpOnly` cookies for v3):
+
+-   **Login**:
+    1.  User authenticates (Guest or Google).
+    2.  Backend returns `access` and `refresh` tokens.
+    3.  Tokens are stored in `localStorage`.
+-   **Requests**:
+    -   Axios interceptor (in `api.js`) attaches `Authorization: Bearer <token>` to every request.
+-   **Logout**:
+    -   Clears `localStorage` and redirects to Login.

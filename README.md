@@ -1,54 +1,94 @@
 # Bio-Geoguesser V2
 
-A full-stack web application designed for interactive geography guessing games.
+A full-stack interactive geography guessing game where players identify animal habitats.
 
-## Project Structure
+## 🌟 Features
+- **Interactive Gameplay**: Guess the natural habitat of various animals on a map.
+- **Real-time Scoring**: Get immediate feedback on your guesses.
+- **Multi-Login Options**: Play as a Guest or sign in with Google.
+- **Rich Data**: Facts and images sourced from iNaturalist and Wikipedia.
 
--   **`backend/`**: Django REST Framework API.
--   **`frontend/frontend/`**: React + Vite frontend application.
--   **`database/`**: PostgreSQL schema definitions.
--   **`extraction/`**: Data ingestion and processing scripts.
--   **`authentication/`**: (Inside backend) Handles Guest and Google OAuth login + Redis sessions.
+## 🏗️ Project Architecture
 
-## Quick Start
+The application is composed of three main parts:
+
+1.  **Frontend (`frontend/frontend/`)**: 
+    -   Built with **React** and **Vite**.
+    -   Handles the user interface, map interactions (Leaflet/Google Maps), and authentication flows.
+    -   Communicates with the backend via REST API.
+
+2.  **Backend (`backend/`)**:
+    -   Built with **Django REST Framework (DRF)**.
+    -   Manages game logic, user sessions, and database interactions.
+    -   Uses **PostgreSQL** for persistent data (Users, Animals, Scores) and **Redis** for session management.
+
+3.  **Data Extraction (`extraction/`)**:
+    -   Python scripts to scrape and ingest animal data from iNaturalist and Wikipedia into the database.
+
+## 🚀 Quick Start
 
 ### Prerequisites
--   Python 3.13+
--   Node.js 18+
--   PostgreSQL
--   Redis
+-   **Python 3.11+**
+-   **Node.js 18+**
+-   **PostgreSQL**
+-   **Redis**
+-   **uv** (optional, for fast Python package management)
 
-### 1. Backend Setup
+### 1. Database & Redis Setup
+Ensure PostgreSQL and Redis are running.
+```bash
+# Example using Docker
+docker run --name redis -p 6379:6379 -d redis
+docker run --name postgres -e POSTGRES_PASSWORD=root -p 5432:5432 -d postgres
+```
 
+### 2. Backend Setup
 ```bash
 cd backend
+# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
-# Set up .env variables (DB, REDIS, SECRET_KEY, GOOGLE_CLIENT_ID)
+
+# Configure Environment Variables (.env)
+cp .env.example .env  # (Create .env if not exists)
+# Edit .env with your DB and Redis credentials
+
+# Run Migrations
 python manage.py migrate
+
+# Start Server
 python manage.py runserver
 ```
 
-### 2. Frontend Setup
-
+### 3. Frontend Setup
 ```bash
 cd frontend/frontend
 npm install
-# Set up .env variables (VITE_API_BASE_URL, VITE_GOOGLE_CLIENT_ID)
+
+# Configure Environment Variables
+# Create .env file with:
+# VITE_API_BASE_URL=http://localhost:8000/api
+# VITE_GOOGLE_CLIENT_ID=your-google-client-id
+
+# Start Development Server
 npm run dev
 ```
 
-### 3. Database Setup
+## 📚 Documentation
 
-Using Docker or local Postgres:
-```bash
-psql -U postgres -d bio_geo_guesser -f database/create_db.pgsql
-```
+Detailed documentation for each component can be found here:
 
-## Documentation
+-   [**Backend Documentation**](./backend/README.md) - API endpoints, Auth flows, Django settings.
+-   [**Frontend Documentation**](./frontend/frontend/README.md) - Components, State management, Build process.
+-   [**Extraction Pipeline**](./extraction/README.md) - How to ingest new animal data.
+-   [**Database Schema**](./docs/DATABASE.md) - SQL tables and relationships.
 
--   [Backend Documentation](./backend/README.md)
--   [Frontend Documentation](./frontend/frontend/README.md)
--   [API Reference](./docs/API.md)
--   [Database Schema](./docs/DATABASE.md)
+## 🤝 Contribution
+1.  Fork the repository.
+2.  Create a feature branch (`git checkout -b feature/AmazingFeature`).
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4.  Push to the branch (`git push origin feature/AmazingFeature`).
+5.  Open a Pull Request.
