@@ -1,51 +1,105 @@
 # Backend Documentation
 
-The backend is built with **Django 6.0** and **Django REST Framework**.
+The backend of Bio-Geoguesser V2 is a robust REST API built with **Django** and **Django REST Framework (DRF)**. It handles user authentication, game session management, and serves animal data.
 
-## Tech Stack
--   **Framework**: Django 6.0 + DRF 3.16
--   **Database**: PostgreSQL (via `psycopg`)
--   **Cache/Session**: Redis (via `django-redis`)
--   **Authentication**: JWT (`simplejwt`) + Custom Session Management
+## 🛠️ Tech Stack
 
-## Setup
+-   **Framework**: Django 6.0 + Django REST Framework 3.16
+-   **Database**: PostgreSQL
+-   **Caching & Sessions**: Redis
+-   **Authentication**: JWT (JSON Web Tokens) + Custom Redis-based Session Management
+-   **Task Queue**: (Optional/Planned) Celery for background tasks
 
-1.  **Environment Variables**:
-    Create a `.env` file in the root directory (or backend root) with:
-    ```env
-    SECRET_KEY=your-secret-key
-    DEBUG=True
-    ALLOWED_HOSTS=*
-    DB_NAME=bio_geo_guesser
-    DB_USER=root
-    DB_PASSWORD=root
-    DB_HOST=localhost
-    DB_PORT=5432
-    REDIS_HOST=localhost
-    REDIS_PORT=6379
-    GOOGLE_CLIENT_ID=your-google-client-id
-    ```
+## ⚙️ Setup & Installation
 
-2.  **Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    # OR using uv
-    uv pip install -r requirements.txt
-    ```
+### 1. Prerequisites
+-   Python 3.11+
+-   PostgreSQL running
+-   Redis running
 
-3.  **Run Server**:
-    ```bash
-    python manage.py runserver
-    ```
+### 2. Installation
 
-## Application Structure
+Navigate to the `backend` directory:
+```bash
+cd backend
+```
 
--   **`backend/`**: Core project settings (`settings.py`, `urls.py`, `wsgi.py`).
--   **`authentication/`**: Custom authentication logic (Guest, Google OAuth, Session Management).
--   **`manage.py`**: Django management script.
+Create and activate a virtual environment:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
 
-## Key Features
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
--   **CORS**: Configured to allow frontend origins (`http://localhost:5173`).
--   **Redis Sessions**: User sessions (Guest & Permanent) are stored in Redis with a 30-day TTL.
--   **Google OAuth**: Integated verification of Google ID tokens.
+### 3. Environment Variables
+
+Create a `.env` file in the `backend` directory. 
+
+**Required Variables:**
+
+```ini
+# Django Settings
+SECRET_KEY=your-super-secret-key-change-in-production
+DEBUG=True
+ALLOWED_HOSTS=*
+
+# Database (PostgreSQL)
+DB_NAME=bio_geo_guesser
+DB_USER=postgres
+DB_PASSWORD=root
+DB_HOST=localhost
+DB_PORT=5432
+
+# Redis (Caching & Sessions)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Google OAuth (For Google Login)
+GOOGLE_CLIENT_ID=your-google-client-id
+```
+
+### 4. Database Migration
+
+Apply the database migrations to set up the schema:
+
+```bash
+python manage.py migrate
+```
+
+### 5. Create Superuser (Optional)
+
+To access the Django Admin panel:
+
+```bash
+python manage.py createsuperuser
+```
+
+### 6. Run Server
+
+```bash
+python manage.py runserver
+```
+The API will be available at `http://127.0.0.1:8000/`.
+
+## 🔐 Authentication
+
+Authentication is handled by the `authentication` app. We use a hybrid approach:
+-   **JWT**: Used for stateless API authentication.
+-   **Redis Sessions**: Used to manage the validity of the JWTs. If a session is deleted from Redis, the corresponding JWT becomes invalid.
+
+### Flows
+1.  **Guest Login**: Creates a temporary user and session.
+2.  **Google Login**: Verifies Google ID Token and creates/retrieves a permanent user.
+
+See [Authentication README](./authentication/README.md) for detailed endpoint documentation.
+
+## 📂 Project Structure
+
+-   `backend/`: Project configuration (`settings.py`, `urls.py`).
+-   `authentication/`: User auth logic, models, and views.
+-   `game/`: (Planned) Game logic, rounds, and scoring.
+-   `api/`: (Planned) General API endpoints.
