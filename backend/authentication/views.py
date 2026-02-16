@@ -4,14 +4,20 @@ import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.authentication import SessionAuthentication
+from .authentication import CustomJWTAuthentication
 from rest_framework_simplejwt.tokens import AccessToken
 from django.core.cache import cache
 from .models import User
 from .serializers import UserSerializer
+from .services import get_user_profile_data
 
 
 class UserListView(APIView):
+    authentication_classes = [SessionAuthentication, CustomJWTAuthentication]
+    permission_classes = [IsAdminUser]
+    
     def get(self, request):
         users = User.objects.all()
         return Response(UserSerializer(users, many=True).data)
@@ -84,23 +90,8 @@ class MeView(APIView):
     def get(self, request):
         user = request.user
 
-        if user.is_guest:
-            redis_key = f"session:{user.user_id}"
-            guest_data = cache.get(redis_key) or {}
-
-            return Response({
-                "identity_type": "guest",
-                "user_id": str(user.user_id),
-                "username": user.username,
-                "guest_session": guest_data
-            })
-
-        return Response({
-            "identity_type": "permanent",
-            "user_id": str(user.user_id),
-            "username": user.username,
-            "email": user.email
-        })
+        profile_data = get_user_profile_data(user)
+        return Response(profile_data)
 
 
 # -------------------------

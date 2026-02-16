@@ -103,3 +103,4 @@ See [Authentication README](./authentication/README.md) for detailed endpoint do
 -   `authentication/`: User auth logic, models, and views.
 -   `game/`: (Planned) Game logic, rounds, and scoring.
 -   `api/`: (Planned) General API endpoints.
+-   `multiplayer/`: Real-time multiplayer logic using Django Channels.
