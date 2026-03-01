@@ -61,7 +61,10 @@ INSTALLED_APPS = [
     'channels',
     'rest_framework',
     'corsheaders',
-    'django_extensions'
+    'django_extensions',
+    'animal',
+    'game',
+    'userprofile',
 ]
 
 MIDDLEWARE = [

@@ -13,7 +13,6 @@ from .models import User
 from .serializers import UserSerializer
 from .services import get_user_profile_data
 
-
 class UserListView(APIView):
     authentication_classes = [SessionAuthentication, CustomJWTAuthentication]
     permission_classes = [IsAdminUser]
@@ -93,6 +92,38 @@ class MeView(APIView):
         profile_data = get_user_profile_data(user)
         return Response(profile_data)
 
+    def patch(self, request):
+        user = request.user
+        new_username = request.data.get('username')
+
+        if not new_username:
+            return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Ensure the username isn't incredibly long or taken by another user
+        if len(new_username) > 100:
+            return Response({"error": "Username too long"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check for uniqueness, ignoring the current user
+        if User.objects.filter(username=new_username).exclude(user_id=user.user_id).exists():
+           return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.username = new_username
+        user.save()
+
+        profile_data = get_user_profile_data(user)
+        return Response(profile_data)
+
+    def delete(self, request):
+        user = request.user
+        # Wipe session from redis for immediate token invalidation
+        redis_key = f"session:{user.user_id}"
+        cache.delete(redis_key)
+        
+        # Completely delete the user. The DB signals will cascade and clean up user profiles, stats, singleplayer rooms, and any multiplayer rooms where they were the sole permanent player.
+        user.delete()
+        
+        return Response({"message": "User profile proactively deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
 
 # -------------------------
 # Logout (Revocation)
@@ -101,8 +132,13 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        redis_key = f"session:{request.user.user_id}"
+        user = request.user
+        redis_key = f"session:{user.user_id}"
         cache.delete(redis_key)
+        
+        # If the user is a guest, delete their account entirely to free up the username and remove data
+        if user.is_guest:
+            user.delete()
 
         return Response({"message": "Logged out successfully"})
 
@@ -112,7 +148,6 @@ class LogoutView(APIView):
 # -------------------------
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-import os
 
 class GoogleAuthView(APIView):
     permission_classes = [AllowAny]

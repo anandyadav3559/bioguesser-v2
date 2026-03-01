@@ -54,9 +54,12 @@ The output will be in the `dist/` directory.
 ```text
 src/
 ├── assets/         # Static assets (images, icons)
-├── components/     # Reusable UI components (Buttons, Inputs, Modals)
+├── components/     # Reusable UI components
+│   ├── GameMenu.jsx   # Game settings and start menu
+│   ├── GamePlay.jsx   # Active game session UI
+│   ├── AnimalCard.jsx # Animal detail display component
 ├── pages/          # Page components (routed views)
-│   ├── HomePage.jsx   # Main game dashboard
+│   ├── HomePage.jsx   # Main container and state management for the game
 │   ├── LoginPage.jsx  # Auth entry point
 ├── services/       # API service functions
 │   ├── api.js      # Axios instance with interceptors

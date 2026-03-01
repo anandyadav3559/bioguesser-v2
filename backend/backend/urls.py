@@ -22,4 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # Point 'api/auth/' to your authentication app's urls
     path('api/auth/', include('authentication.urls')), 
+    path('api/animal/', include('animal.urls')),
+    path('api/game/', include('game.urls')),
 ]
