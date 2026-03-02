@@ -2,5 +2,5 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "cd backend && python manage.py migrate && daphne -b 0.0.0.0 -p $PORT backend.asgi:application"
+startCommand = "cd backend && python manage.py migrate && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p $PORT backend.asgi:application"
 restartPolicyType = "on_failure"
