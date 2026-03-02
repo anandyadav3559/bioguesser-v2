@@ -110,27 +110,28 @@ const GamePlay = ({
                     />
                 )}
 
-                {/* Overlays on Map */}
+                {/* Top-left: Timer while playing, Score after guess */}
                 <div style={{
                     position: 'absolute',
                     top: '20px',
                     left: '20px',
-                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    backgroundColor: guessSubmitted ? 'rgba(46,204,113,0.85)' : 'rgba(0,0,0,0.7)',
                     padding: '10px 20px',
                     borderRadius: '30px',
-                    color: '#f1c40f',
+                    color: 'white',
                     fontWeight: 'bold',
-                    zIndex: 10
+                    zIndex: 10,
+                    transition: 'background-color 0.3s',
+                    fontSize: '1rem'
                 }}>
-                    Time Left: <span style={{ color: timeLeft <= 5 ? '#e74c3c' : '#f1c40f' }}>{timeLeft}s</span>
+                    {guessSubmitted && roundScore !== null
+                        ? <>🎯 Score: <span style={{ color: '#fff', fontSize: '1.2rem' }}>{Number(roundScore).toFixed(2)}</span></>
+                        : <>Time Left: <span style={{ color: timeLeft <= 5 ? '#e74c3c' : '#f1c40f' }}>{timeLeft}s</span></>
+                    }
                 </div>
 
-                <div style={{
-                    position: 'absolute',
-                    top: '20px',
-                    right: '20px',
-                    zIndex: 10
-                }}>
+                {/* Top-right: Quit Game */}
+                <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
                     <button
                         onClick={() => setGameStarted(false)}
                         style={{
@@ -146,23 +147,6 @@ const GamePlay = ({
                         Quit Game
                     </button>
                 </div>
-
-                {guessSubmitted && roundScore !== null && (
-                    <div style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        backgroundColor: 'white',
-                        padding: '20px 40px',
-                        borderRadius: '15px',
-                        boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
-                        textAlign: 'center',
-                        zIndex: 10
-                    }}>
-                        <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '2rem' }}>Score: {roundScore}</h3>
-                    </div>
-                )}
 
                 {guessSubmitted && (
                     <div style={{

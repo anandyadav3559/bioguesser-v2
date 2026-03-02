@@ -1,73 +1,151 @@
-# Data Extraction Pipeline
+# Extraction Pipeline
 
-Scripts and tools to ingest animal data from external sources (iNaturalist, Wikipedia) into the Bio-Geoguesser database.
+The extraction pipeline populates the BioGuesser database with animal data. It fetches species characteristics from [API Ninjas](https://api-ninjas.com/) and real-world observation records from [iNaturalist](https://www.inaturalist.org/), clusters the observations into H3 hexagonal cells, and inserts everything into PostgreSQL.
 
-## 📋 Overview
+---
 
-The extraction pipeline performs the following steps:
-1.  **Read List**: Reads a list of animal names from `animals.txt`.
-2.  **Fetch Data**:
-    -   Queries **iNaturalist API** for observation data (images, locations, scientific names).
-    -   Queries **Wikipedia API** for a short fact about the animal.
-3.  **Process**: Normalizes the data and prepares it for insertion.
-4.  **Ingest**: Inserts the data into the PostgreSQL database, handling duplicates.
+## Files
 
-## ⚙️ Setup
+| File                 | Description                                           |
+| -------------------- | ----------------------------------------------------- |
+| `ingest_Data.py`     | Main ingestion script                                 |
+| `animals.txt`        | Line-separated list of animal common names to process |
+| `docker-compose.yml` | Spins up a local PostgreSQL instance for development  |
 
-### 1. Prerequisites
--   Python 3.11+
--   PostgreSQL database running
+---
 
-### 2. Environment Variables
-Create a `.env` file in the `extraction/` directory:
+## Data Flow
 
-```ini
-DB_NAME=bio_geo_guesser
-DB_USER=postgres
-DB_PASSWORD=root
-DB_HOST=localhost
-DB_PORT=5432
+```
+animals.txt
+    │
+    ▼
+fetch_animal_details()          ← API Ninjas (characteristics)
+    │
+    ▼
+fetch_observations()            ← iNaturalist (GPS sightings)
+    │
+    ▼
+H3 clustering (resolution 2)   ← ~158 km edge-length cells
+    │
+    ▼
+insert_animal_data()            ← PostgreSQL
+    │
+    ▼
+animals / animal_characteristics / animal_locations tables
 ```
 
-### 3. Dependencies
-Install the required Python packages:
+---
+
+## Database Schema Created
+
+The script creates three tables if they don't exist:
+
+### `animals`
+
+| Column            | Type               | Notes                                                        |
+| ----------------- | ------------------ | ------------------------------------------------------------ |
+| `id`              | `UUID`             | Auto-generated PK                                            |
+| `name`            | `TEXT`             | Common name                                                  |
+| `scientific_name` | `TEXT UNIQUE`      | Used as deduplication key                                    |
+| `image_url`       | `TEXT`             | Extracted from iNaturalist observation photos                |
+| `max_probability` | `DOUBLE PRECISION` | Maximum H3 cell sighting probability (used for game scoring) |
+| `entropy`         | `DOUBLE PRECISION` | Shannon entropy of sighting distribution                     |
+
+### `animal_characteristics`
+
+All biology fields from API Ninjas: `prey`, `habitat`, `predators`, `top_speed`, `lifespan`, `weight`, `length`, `skin_type`, `color`, `gestation_period`, `average_litter_size`, `age_of_sexual_maturity`, `age_of_weaning`.
+
+### `animal_locations`
+
+| Column      | Type               | Notes                                        |
+| ----------- | ------------------ | -------------------------------------------- |
+| `h3_index`  | `TEXT`             | H3 cell identifier at resolution 2           |
+| `latitude`  | `DOUBLE PRECISION` | Average latitude of observations in the cell |
+| `longitude` | `DOUBLE PRECISION` | Average longitude                            |
+| `count`     | `INTEGER`          | Number of sightings in this cell             |
+
+**Indexes**: `animal_id`, `h3_index`
+
+---
+
+## H3 Clustering
+
+Observations from iNaturalist are bucketed into [H3](https://h3geo.org/) hexagonal cells at **resolution 2** (edge length ≈ 158 km). This balances geographic precision with dataset size.
+
+- Cells with **fewer than 10 observations** are discarded (noise filter)
+- Each valid cluster stores the **average lat/lng** of all observations in the cell
+
+After inserting clusters, `max_probability` and Shannon `entropy` are computed per animal:
+
+```python
+p_cell = count / total_sightings
+entropy -= p_cell * log(p_cell)
+p_max = max(p_cell for all cells)
+```
+
+These values drive the scoring algorithm in `game.services.GameService.evaluate_round()`.
+
+---
+
+## Configuration
+
+Set via `.env` file or environment variables:
+
+| Variable         | Default           | Description                                            |
+| ---------------- | ----------------- | ------------------------------------------------------ |
+| `DB_NAME`        | `bio_geo_guesser` | PostgreSQL database name                               |
+| `DB_USER`        | `postgres`        | DB user                                                |
+| `DB_PASSWORD`    | `root`            | DB password                                            |
+| `DB_HOST`        | `localhost`       | DB host                                                |
+| `DB_PORT`        | `5432`            | DB port                                                |
+| `API_NINJAS_KEY` | _(required)_      | API key from [api-ninjas.com](https://api-ninjas.com/) |
+
+Script-level constants (edit in `ingest_Data.py`):
+
+| Constant        | Default | Description                               |
+| --------------- | ------- | ----------------------------------------- |
+| `START_PAGE`    | `1`     | iNaturalist pagination start              |
+| `PER_PAGE`      | `200`   | Observations per page (max 200)           |
+| `MAX_PAGES`     | `10`    | Pages to fetch when `FETCH_ALL=False`     |
+| `FETCH_ALL`     | `False` | Set `True` to exhaust all available pages |
+| `H3_RESOLUTION` | `2`     | H3 grid resolution                        |
+
+---
+
+## Running the Pipeline
 
 ```bash
-# Using pip
-pip install psycopg[binary] aiohttp python-dotenv wikipedia-api
+# 1. Start the database (if using Docker)
+cd extraction/
+docker compose up -d
 
-# OR using uv
-uv pip install psycopg[binary] aiohttp python-dotenv wikipedia-api
-```
+# 2. Add animal names to animals.txt (one per line)
+echo "Lion" >> animals.txt
+echo "African Elephant" >> animals.txt
 
-## 🏃 Usage
-
-### 1. Prepare Animal List
-Edit `animals.txt` and add the names of animals you want to ingest, one per line.
-```text
-Panthera leo
-Aptenodytes forsteri
-Loxodonta africana
-```
-
-### 2. Run Ingestion Script
-Execute the script to start the process:
-
-```bash
+# 3. Run ingestion
 python ingest_Data.py
 ```
 
-> **Note:** The script will clear the contents of `animals.txt` after a successful run to prevent double-processing.
+The script is **resumable**: it checks if an animal already exists in the DB before making API calls, and removes successfully processed animals from `animals.txt` so re-runs skip them.
 
-## 🗄️ Database Schema
+---
 
-Data is inserted into the `animals` table:
+## Rate Limiting
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `animal_id` | UUID | Primary Key |
-| `name` | TEXT | Common Name |
-| `scientific_name` | TEXT | Scientific Name (Unique) |
-| `image_url` | TEXT | URL to animal image |
-| `locations` | JSONB | Array of lat/lon coordinates |
-| `fact` | TEXT | Fun fact description |
+- iNaturalist: `time.sleep(1.0)` between page requests
+- API Ninjas: one request per animal (no pagination needed)
+
+---
+
+## Dependencies
+
+```
+psycopg       # PostgreSQL driver (psycopg3)
+h3            # H3 hexagonal indexing
+python-dotenv # .env loading
+requests      # HTTP client
+```
+
+Install with: `uv sync` or `pip install psycopg h3 python-dotenv requests`

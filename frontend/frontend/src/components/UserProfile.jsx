@@ -89,8 +89,8 @@ const UserProfile = ({ handleLogout, inlineMode = false }) => {
             gap: '25px',
             width: inlineMode ? '100%' : '350px',
             boxSizing: 'border-box',
-            maxHeight: '100%',
-            overflowY: "auto"
+            height: '100%',
+            overflowY: 'hidden'
         }}>
             {/* Header Section */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -188,27 +188,11 @@ const UserProfile = ({ handleLogout, inlineMode = false }) => {
                 )}
             </div>
 
-            {/* Profile Stats */}
-            {stats && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                    <div style={{ backgroundColor: 'rgba(46, 204, 113, 0.2)', padding: '15px 10px', borderRadius: '12px', textAlign: 'center' }}>
-                        <span style={{ color: '#bdc3c7', fontSize: '0.8rem', display: 'block' }}>GAMES</span>
-                        <strong style={{ color: '#2ecc71', fontSize: '1.5rem' }}>{stats.games_played}</strong>
-                    </div>
-                    <div style={{ backgroundColor: 'rgba(52, 152, 219, 0.2)', padding: '15px 10px', borderRadius: '12px', textAlign: 'center' }}>
-                        <span style={{ color: '#bdc3c7', fontSize: '0.8rem', display: 'block' }}>TOTAL SCORE</span>
-                        <strong style={{ color: '#3498db', fontSize: '1.5rem' }}>{stats.total_score}</strong>
-                    </div>
-                    <div style={{ backgroundColor: 'rgba(155, 89, 182, 0.2)', padding: '15px 10px', borderRadius: '12px', textAlign: 'center' }}>
-                        <span style={{ color: '#bdc3c7', fontSize: '0.8rem', display: 'block' }}>HIGH SCORE</span>
-                        <strong style={{ color: '#9b59b6', fontSize: '1.5rem' }}>{stats.high_score}</strong>
-                    </div>
-                </div>
-            )}
+
 
             {/* Game History List */}
-            <div style={{ marginTop: '10px' }}>
-                <h4 style={{ color: 'white', marginBottom: '15px', paddingBottom: '5px', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+            <div style={{ marginTop: '10px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <h4 style={{ color: 'white', marginBottom: '15px', paddingBottom: '5px', borderBottom: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
                     Recent Games
                 </h4>
                 {history.length === 0 ? (
@@ -216,7 +200,7 @@ const UserProfile = ({ handleLogout, inlineMode = false }) => {
                         No games played yet. Get out there and explore!
                     </p>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '350px', overflowY: 'auto', paddingRight: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', flex: 1, overflowY: 'auto', paddingRight: '10px' }}>
                         {history.map((game, index) => (
                             <div key={index} style={{
                                 backgroundColor: 'rgba(0,0,0,0.4)',
@@ -229,7 +213,7 @@ const UserProfile = ({ handleLogout, inlineMode = false }) => {
                                         {new Date(game.played_at).toLocaleDateString()}
                                     </span>
                                     <span style={{ color: '#f1c40f', fontWeight: 'bold' }}>
-                                        Score: {game.total_score}
+                                        Score: {Number(game.total_score).toFixed(2)}
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -242,7 +226,7 @@ const UserProfile = ({ handleLogout, inlineMode = false }) => {
                                                 R{r.round_number}: {r.animal?.common_name || 'Unknown'}
                                             </span>
                                             <span style={{ color: '#2ecc71', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                                +{r.score_awarded}
+                                                +{Number(r.score_awarded).toFixed(2)}
                                             </span>
                                         </div>
                                     ))}

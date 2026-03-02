@@ -43,7 +43,7 @@ class Player(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='game_profiles')
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='players')
-    score = models.IntegerField(default=0)
+    score = models.FloatField(default=0.0)
     is_active = models.BooleanField(default=True)
     joined_at = models.DateTimeField(auto_now_add=True)
 
@@ -84,7 +84,7 @@ class Guess(models.Model):
     round = models.ForeignKey(Round, on_delete=models.CASCADE, related_name='guesses')
     latitude = models.FloatField()
     longitude = models.FloatField()
-    score_awarded = models.IntegerField(default=0)
+    score_awarded = models.FloatField(default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -37,7 +37,8 @@ const GameMenu = ({
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            alignItems: 'center'
+            alignItems: 'stretch',
+            overflow: 'hidden'
         },
         menuButton: (isActive) => ({
             background: isActive ? 'linear-gradient(90deg, #2ecc71, #27ae60)' : 'transparent',
@@ -121,7 +122,9 @@ const GameMenu = ({
                             borderRadius: '16px',
                             width: '400px',
                             textAlign: 'center',
-                            border: '1px solid rgba(255,255,255,0.1)'
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            alignSelf: 'center',
+                            margin: 'auto'
                         }}>
                             <h2 style={{ color: '#f1c40f', marginBottom: '30px', fontSize: '1.8rem' }}>Play Singleplayer</h2>
 
@@ -180,7 +183,7 @@ const GameMenu = ({
                     )}
 
                     {activeTab === 'profile' && (
-                        <div style={{ width: '400px' }}>
+                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
                             {/* Repurposed UserProfile specifically engineered to visually sit here */}
                             <UserProfile handleLogout={handleLogout} inlineMode={true} />
                         </div>

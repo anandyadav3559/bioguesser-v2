@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import background from "../assets/background.png";
@@ -31,42 +31,47 @@ const HomePage = () => {
 
     const [roomCode, setRoomCode] = useState(null);
 
+    // ── Preload animals as soon as the page mounts ──────────────────────────
+    useEffect(() => {
+        const fetchInitialAnimals = async () => {
+            try {
+                const response = await api.get('/animal/batch/?limit=10&ordering=random');
+                const animals = response.data;
+                if (animals && animals.length > 0) {
+                    const stack = [...animals];
+                    const first = stack.shift();
+                    setAnimalStack(stack);
+                    setCurrentAnimal(first);
+                    // Preload first image
+                    if (first.image_url) {
+                        const img = new Image(); img.src = first.image_url;
+                    }
+                    // Preload second image
+                    if (stack.length > 0) preloadNextAnimal(stack[0]);
+                }
+            } catch (err) {
+                console.error('Failed to prefetch animals:', err);
+            }
+        };
+        fetchInitialAnimals();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const startSinglePlayer = async () => {
+        if (!currentAnimal) {
+            alert('Animals are still loading, please wait a moment.');
+            return;
+        }
         setLoading(true);
         try {
-            // Priority: Create Room
             const roomRes = await api.post('/game/create/', {
                 time_per_round: parseInt(selectedTime.replace('s', ''))
             });
-            const newRoomCode = roomRes.data.room_code;
-            setRoomCode(newRoomCode);
-
-            // Fetch first batch of animals
-            const response = await api.get('/animal/batch/?limit=10&ordering=random');
-            const animals = response.data;
-            if (animals && animals.length > 0) {
-                const stack = [...animals];
-                const first = stack.shift();
-                setAnimalStack(stack);
-                setCurrentAnimal(first);
-                setGameStarted(true);
-
-                // Preload first animal image if it exists
-                if (first.image_url) {
-                    const img = new Image();
-                    img.src = first.image_url;
-                }
-
-                // Prepare next animal
-                if (stack.length > 0) {
-                    preloadNextAnimal(stack[0]);
-                }
-            } else {
-                alert("No animals found!");
-            }
+            setRoomCode(roomRes.data.room_code);
+            setGameStarted(true);
         } catch (error) {
-            console.error("Failed to start game:", error);
-            alert("Failed to start game. Please check your connection.");
+            console.error('Failed to start game:', error);
+            alert('Failed to start game. Please check your connection.');
         } finally {
             setLoading(false);
         }

@@ -36,9 +36,9 @@ class GuestAuthView(APIView):
             auth_provider="guest"
         )
 
-        # 2️⃣ Store session in Redis (1 hour TTL)
+        # 2️⃣ Store session in Redis (4 hours TTL for guests)
         redis_key = f"session:{user.user_id}"
-        cache.set(redis_key, {"active": True}, timeout=2592000)
+        cache.set(redis_key, {"active": True}, timeout=14400)
 
         # 3️⃣ Create JWT
         token = AccessToken()

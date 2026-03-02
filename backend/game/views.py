@@ -1,14 +1,17 @@
+import json
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from .services import GameService
 from .models import Room, Round, Player
-from animal.models import Animal
+from animal.models import Animal, AnimalLocation
 from django.shortcuts import get_object_or_404
 
 class CreateRoomView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
 
     def post(self, request):
         try:
@@ -95,8 +98,6 @@ class SubmitGuessView(APIView):
 
             # Get the real locations so the frontend can plot them
             # Return up to 50 max points to avoid clutter or huge payloads
-            import json
-            from animal.models import AnimalLocation
             true_locations = list(AnimalLocation.objects.filter(
                 animal=active_round.animal
             ).values('latitude', 'longitude', 'count')[:50])

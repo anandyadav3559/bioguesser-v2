@@ -1,120 +1,87 @@
-# Multiplayer App
+# `multiplayer` App
 
-This Django app handles real-time multiplayer functionality using Django Channels.
+The `multiplayer` app provides real-time WebSocket support for multiplayer game sessions using **Django Channels**.
 
-## Overview
+---
 
-The `multiplayer` app provides WebSocket consumers to manage game state and real-time communication between players. Currently, it supports a basic chat lobby where messages are broadcast to all connected clients.
+## Current State
 
-## WebSocket Endpoints
+The app currently implements the WebSocket connection layer and a broadcast lobby. Full multiplayer game orchestration (synced rounds, guesses, leaderboard pushes) is **planned but not yet implemented** — the REST-based `game` app handles all round and scoring logic today.
 
-### Lobby Connection
+---
 
-- **URL:** `ws/multiplayer/lobby/`
-- **Protocol:** `ws://` (or `wss://` in production)
+## Stack
 
-To connect to the lobby, use a WebSocket client to connect to the above URL.
+| Component        | Library                                             |
+| ---------------- | --------------------------------------------------- |
+| WebSocket server | [Django Channels](https://channels.readthedocs.io/) |
+| Channel layer    | Redis (`channels_redis`)                            |
+| Auth             | `CustomJWTAuthentication` (via query string token)  |
 
-## Consumers
+---
 
-### `GameConsumer`
+## Consumer: `GameConsumer`
 
-The `GameConsumer` in `consumers.py` handles the WebSocket connection logic.
+File: `consumers.py`
 
-- **Connection:** Upon connection, the client is added to the "lobby" group (`multiplayer_lobby`).
-- **Disconnection:** The client is removed from the group upon disconnection.
-- **Receiving Messages:** Expects a JSON payload with a `message` key.
-- **Broadcasting:** When a message is received, it is broadcast to all clients in the "lobby" group.
+An `AsyncWebsocketConsumer` that manages the WebSocket lifecycle.
 
-## Message Format
+### Connection (`connect`)
 
-### Sending a Message (Client -> Server)
+1. Extracts the JWT from the WebSocket URL query string (`?token=...`)
+2. Verifies the token and resolves the `User` via `get_user_from_token()`
+3. If invalid → closes connection with code `4003`
+4. Joins the `multiplayer_lobby` channel group and accepts the connection
 
-Messages should be sent as a JSON string:
+### Disconnection (`disconnect`)
 
-```json
-{
-    "message": "Hello, world!"
-}
+Leaves the channel group. Safe even if connection was never fully established (checks for `room_group_name`).
+
+### Message Handling (`receive` / `chat_message`)
+
+Broadcasts any received message to all members of the channel group:
+
+```
+Client → receive() → group_send() → chat_message() → all clients in group
 ```
 
-### Receiving a Message (Server -> Client)
+---
 
-The server broadcasts messages to all connected clients in the following JSON format:
+## Routing
 
-```json
-{
-    "message": "Hello, world!"
-}
+File: `routing.py`
+
+WebSocket URL pattern:
+
+```
+ws://<host>/ws/game/
 ```
 
-## Setup
+---
 
-Ensure your `asgi.py` is configured to route WebSocket requests to this app's routing configuration.
+## Authentication
 
-Example `asgi.py`:
+The WebSocket handshake doesn't support HTTP headers in the browser, so the JWT is passed as a query parameter:
 
-```python
-from channels.routing import ProtocolTypeRouter, URLRouter
-from django.core.asgi import get_asgi_application
-import multiplayer.routing
-
-application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
-    "websocket": URLRouter(
-        multiplayer.routing.websocket_urlpatterns
-    ),
-})
+```
+ws://localhost:8000/ws/game/?token=<access_token>
 ```
 
-## Testing Connection
+The consumer validates the token using `database_sync_to_async` to safely perform the DB lookup from an async context.
 
-You can test the WebSocket connection using command-line tools like `wscat` or `websocat`.
+---
 
-### Using `wscat` (Node.js)
+## Planned Features
 
-1.  **Install:**
-    ```bash
-    npm install -g wscat
-    ```
+- Synced round start/end events pushed to all players in a room
+- Real-time guess submission and score reveal
+- Room-specific channel groups (currently all clients share a single `lobby` group)
+- Player join/leave notifications
 
-2.  **Connect:**
-    ```bash
-    wscat -c ws://127.0.0.1:8000/ws/multiplayer/lobby/
-    ```
+---
 
-3.  **Send a Message:**
-    Once connected, type the JSON message and hit Enter:
-    ```json
-    {"message": "Hello from wscat!"}
-    ```
+## Dependencies
 
-### Using `websocat` (Rust/Binary)
-
-1.  **Install:**
-    Refer to the [websocat installation guide](https://github.com/vi/websocat).
-
-2.  **Connect:**
-    ```bash
-    websocat ws://127.0.0.1:8000/ws/multiplayer/lobby/
-    ```
-
-3.  **Send a Message:**
-    Type the JSON message and hit Enter:
-    ```json
-    {"message": "Hello from websocat!"}
-    ```
-
-### Using `curl` (Connection Check Only)
-
-You can check if the endpoint is reachable (returns a 101 Switching Protocols) using `curl`:
-
-```bash
-curl -i -N \
-    -H "Connection: Upgrade" \
-    -H "Upgrade: websocket" \
-    -H "Host: 127.0.0.1:8000" \
-    -H "Origin: http://127.0.0.1:8000" \
-    http://127.0.0.1:8000/ws/multiplayer/lobby/
-```
-
+- **`authentication`** — `User` model for token resolution
+- **`game`** — Will consume `GameService` methods once full multiplayer is implemented
+- **Redis** — Required as the Django Channels channel layer backend

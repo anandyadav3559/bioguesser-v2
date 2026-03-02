@@ -41,11 +41,9 @@ def get_user_profile_data(user):
                     "score_awarded": g.score_awarded,
                     "animal": {
                         "id": animal.id,
-                        "common_name": animal.common_name,
+                        "common_name": animal.name,
                         "scientific_name": animal.scientific_name,
-                        "image_url": animal.image_url,
-                        "true_latitude": animal.latitude,
-                        "true_longitude": animal.longitude
+                        "image_url": animal.image_url
                     }
                 })
 

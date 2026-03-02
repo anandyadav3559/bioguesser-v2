@@ -6,8 +6,8 @@ from authentication.models import User
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     games_played = models.IntegerField(default=0)
-    total_score = models.IntegerField(default=0)
-    high_score = models.IntegerField(default=0)
+    total_score = models.FloatField(default=0.0)
+    high_score = models.FloatField(default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

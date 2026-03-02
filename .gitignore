@@ -12,6 +12,15 @@ ENV/
 env.bak/
 venv.bak/
 
+# Testing & Linting caches
+.pytest_cache/
+.ruff_cache/
+
+# Django
+*.sqlite3
+*.db
+local_settings.py
+
 # IDEs
 .vscode/
 .idea/
