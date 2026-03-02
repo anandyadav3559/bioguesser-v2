@@ -1,17 +1,20 @@
 # authentication/views.py
 
 import uuid
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from django.core.cache import cache
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.authentication import SessionAuthentication
-from .authentication import CustomJWTAuthentication
 from rest_framework_simplejwt.tokens import AccessToken
-from django.core.cache import cache
+from .authentication import CustomJWTAuthentication
 from .models import User
 from .serializers import UserSerializer
 from .services import get_user_profile_data
+from backend.throttling import GuestLoginThrottle, GoogleLoginThrottle, UsernameLoginThrottle
 
 class UserListView(APIView):
     authentication_classes = [SessionAuthentication, CustomJWTAuthentication]
@@ -27,6 +30,7 @@ class UserListView(APIView):
 # -------------------------
 class GuestAuthView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [GuestLoginThrottle]  # 10/hour per IP — each call creates a DB user + Redis key
 
     def post(self, request):
         # 1️⃣ Create DB guest user
@@ -143,14 +147,9 @@ class LogoutView(APIView):
         return Response({"message": "Logged out successfully"})
 
 
-# -------------------------
-# Google Auth
-# -------------------------
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
-
 class GoogleAuthView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [GoogleLoginThrottle]  # 10/minute per IP — guards token verification
 
     def post(self, request):
         token = request.data.get("token")

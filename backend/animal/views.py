@@ -1,19 +1,16 @@
 
 # Create your views here.
-from .serializer import AnimalDetailSerializer, AnimalBasicSerializer,AnimalLocationSerializer,AnimalCharacteristicSerializer
-from .models import Animal,AnimalLocation,AnimalCharacteristic
+import random
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
-import uuid
 from rest_framework.permissions import IsAuthenticated
-from authentication.authentication import CustomJWTAuthentication
-from rest_framework.authentication import SessionAuthentication
-from django.shortcuts import get_object_or_404
-from django.db.models import QuerySet
-import random
+from .models import Animal, AnimalLocation, AnimalCharacteristic
+from .serializer import AnimalDetailSerializer, AnimalBasicSerializer
+
 class AnimalDetailView(APIView):
-    authentication_classes = [SessionAuthentication, CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
+
 
     def get(self, request, animal_id):
         animal = get_object_or_404(
@@ -28,7 +25,6 @@ class AnimalDetailView(APIView):
         return Response(serializer.data)
 
 class AnimalBatchView(APIView):
-    authentication_classes = [SessionAuthentication, CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):

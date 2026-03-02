@@ -150,14 +150,26 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "authentication.authentication.CustomJWTAuthentication",
     ),
+    # Global fallback throttles (apply to any view not overriding throttle_classes).
+    # Per-endpoint throttles are defined in authentication/throttling.py and applied
+    # directly on each view class via throttle_classes = [...].
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.AnonRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'user': '20/second',
-        'anon': '5/second',
-        'user_login': '2/minute'
+        # ── Global fallbacks ───────────────────────────────────────────────
+        'user': '60/minute',        # authenticated users: any undecorated view
+        'anon': '30/minute',        # unauthenticated users: any undecorated view
+
+        # ── Auth endpoints ─────────────────────────────────────────────────
+        'user_login':   '5/minute', # email-based account creation (per email)
+        'guest_login':  '10/hour',  # guest creation (per IP) — creates a DB row each time
+        'google_login': '10/minute',# Google OAuth token verification (per IP)
+
+        # ── Game endpoints ─────────────────────────────────────────────────
+        'guess_submit': '20/minute',# POST /game/guess/ (per user) — triggers evaluate_round()
+        'round_start':  '30/minute',# POST /game/start_round/ (per user)
     }
 }
 

@@ -1,9 +1,9 @@
-import json
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+from rest_framework.throttling import UserRateThrottle
+from backend.throttling import GuessSubmitThrottle, RoundStartThrottle
 from .services import GameService
 from .models import Room, Round, Player
 from animal.models import Animal, AnimalLocation
@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404
 
 class CreateRoomView(APIView):
     permission_classes = [IsAuthenticated]
-    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+    throttle_classes = [UserRateThrottle]  # global 60/min fallback is fine for room creation
 
     def post(self, request):
         try:
@@ -31,6 +31,7 @@ class CreateRoomView(APIView):
 
 class StartRoundView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [RoundStartThrottle]  # 30/minute per user
 
     def post(self, request):
         room_code = request.data.get('room_code')
@@ -72,6 +73,7 @@ class StartRoundView(APIView):
 
 class SubmitGuessView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [GuessSubmitThrottle]  # 20/minute per user — guards evaluate_round() DB transactions
 
     def post(self, request):
         room_code = request.data.get('room_code')
