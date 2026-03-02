@@ -1,0 +1,8 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "cd backend && python manage.py migrate && daphne -b 0.0.0.0 -p $PORT backend.asgi:application"
+healthcheckPath = "/api/auth/users/"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
