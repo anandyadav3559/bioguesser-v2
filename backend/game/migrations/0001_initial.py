@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
                 ('status', models.CharField(choices=[('active', 'Active'), ('finished', 'Finished')], default='active', max_length=20)),
                 ('start_time', models.DateTimeField(blank=True, null=True)),
                 ('end_time', models.DateTimeField(blank=True, null=True)),
-                ('animal', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='rounds', to='animal.animal')),
+                ('animal', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='rounds', to='animal.animal')),
                 ('room', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rounds', to='game.room')),
             ],
             options={

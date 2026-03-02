@@ -65,7 +65,7 @@ class Round(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='rounds')
     round_number = models.IntegerField()
-    animal = models.ForeignKey(Animal, on_delete=models.DO_NOTHING, blank=True, null=True, related_name='rounds')
+    animal = models.ForeignKey(Animal, on_delete=models.DO_NOTHING, blank=True, null=True, db_constraint=False, related_name='rounds')
     status = models.CharField(max_length=20, choices=ROUND_STATUS_CHOICES, default='active')
     start_time = models.DateTimeField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
