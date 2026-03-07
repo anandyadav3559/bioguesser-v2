@@ -12,6 +12,7 @@ DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "root")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
+DATABASE_URL = os.getenv("db_url") 
 
 # H3 Resolution for clustering (0-15, where 0 is global and 15 is sub-meter)
 # Resolution 2 is roughly 158km edge length, good for state/large region clustering
@@ -21,11 +22,7 @@ def get_db_connection():
     """Establishes a connection to the PostgreSQL database."""
     try:
         conn = psycopg.connect(
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            host=DB_HOST,
-            port=DB_PORT,
+            DATABASE_URL,
             autocommit=True
         )
         return conn

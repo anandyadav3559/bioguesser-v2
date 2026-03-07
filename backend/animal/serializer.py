@@ -8,11 +8,7 @@ class AnimalCharacteristicSerializer(serializers.ModelSerializer):
 
 
 class AnimalBasicSerializer(serializers.ModelSerializer):
-    characteristics = AnimalCharacteristicSerializer(
-        source="animalcharacteristic_set",
-        many=True,
-        read_only=True
-    )
+    characteristics = AnimalCharacteristicSerializer(many=True, read_only=True)
 
     class Meta:
         model = Animal
@@ -26,14 +22,8 @@ class AnimalLocationSerializer(serializers.ModelSerializer):
 
 
 class AnimalDetailSerializer(serializers.ModelSerializer):
-    locations = AnimalLocationSerializer(
-        source="animallocation_set",
-        many=True
-    )
-    characteristics = AnimalCharacteristicSerializer(
-        source="animalcharacteristic_set",
-        many=True
-    )
+    locations = AnimalLocationSerializer(many=True)
+    characteristics = AnimalCharacteristicSerializer(many=True)
 
     class Meta:
         model = Animal

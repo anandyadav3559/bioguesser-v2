@@ -15,8 +15,8 @@ class AnimalDetailView(APIView):
     def get(self, request, animal_id):
         animal = get_object_or_404(
             Animal.objects.prefetch_related(
-                "animallocation_set",
-                "animalcharacteristic_set"
+                "locations",
+                "characteristics"
             ),
             id=animal_id
         )
@@ -31,25 +31,31 @@ class AnimalBatchView(APIView):
         limit = int(request.query_params.get("limit", 10))
         ordering = request.query_params.get("ordering", "random")
 
-        queryset = Animal.objects.prefetch_related('animalcharacteristic_set').all()
-
         if ordering == "alphabetical":
-            queryset = queryset.order_by("name")[:limit]
+            queryset = (
+                Animal.objects
+                .prefetch_related('characteristics')
+                .order_by("name")[:limit]
+            )
 
         elif ordering == "random":
-            # Efficient random selection (avoid order_by("?"))
-            total = queryset.count()
-            if total == 0:
+            # Fetch only PKs (integers) — cheap even for large tables
+            all_pks = list(Animal.objects.values_list('pk', flat=True))
+            if not all_pks:
                 return Response([], status=200)
 
-            random_indices = random.sample(
-                range(total),
-                min(limit, total)
+            sampled_pks = random.sample(all_pks, min(limit, len(all_pks)))
+            queryset = (
+                Animal.objects
+                .prefetch_related('characteristics')
+                .filter(pk__in=sampled_pks)
             )
-            queryset = [queryset[i] for i in random_indices]
 
         else:
-            queryset = queryset[:limit]
+            queryset = (
+                Animal.objects
+                .prefetch_related('characteristics')[:limit]
+            )
 
         serializer = AnimalBasicSerializer(queryset, many=True)
         return Response(serializer.data)
