@@ -13,7 +13,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from .authentication import CustomJWTAuthentication
 from .models import User
 from .serializers import UserSerializer
-from .services import get_user_profile_data
+from .services import get_user_profile_data, refresh_user_profile_cache
 from backend.throttling import GuestLoginThrottle, GoogleLoginThrottle, UsernameLoginThrottle
 
 class UserListView(APIView):
@@ -44,7 +44,10 @@ class GuestAuthView(APIView):
         redis_key = f"session:{user.user_id}"
         cache.set(redis_key, {"active": True}, timeout=14400)
 
-        # 3️⃣ Create JWT
+        # 3️⃣ Warm up the profile cache
+        refresh_user_profile_cache(user)
+
+        # 4️⃣ Create JWT
         token = AccessToken()
         token["user_id"] = str(user.user_id)
         token["identity_type"] = "guest"
@@ -72,6 +75,8 @@ class PermanentUserCreateView(APIView):
 
         redis_key = f"session:{user.user_id}"
         cache.set(redis_key, {"active": True}, timeout=2592000)
+
+        refresh_user_profile_cache(user)
 
         token = AccessToken()
         token["user_id"] = str(user.user_id)
@@ -186,6 +191,8 @@ class GoogleAuthView(APIView):
             # Create Session
             redis_key = f"session:{user.user_id}"
             cache.set(redis_key, {"active": True}, timeout=2592000) # 30 days
+
+            refresh_user_profile_cache(user)
 
             # Generate JWT
             access_token = AccessToken()

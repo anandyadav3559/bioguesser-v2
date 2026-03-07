@@ -5,9 +5,11 @@ import math
 import h3
 from django.db import transaction
 from django.db.models import F, Sum
+from django.core.cache import cache
 from game.models import Room, Player, Round, Guess
 from animal.models import Animal, AnimalLocation
 from userprofile.models import UserProfile
+from authentication.services import get_profile_cache_key, refresh_user_profile_cache
 
 class GameService:
     
@@ -207,16 +209,31 @@ class GameService:
 
         leaderboard = room.players.all().order_by('-score').values('user__username', 'score')
         
-        # Update UserProfile stats based on game results
-        for player in room.players.all():
-            try:
-                profile = player.user.profile
-                profile.games_played = F('games_played') + 1
-                profile.total_score = F('total_score') + player.score
-                if player.score > profile.high_score:
-                    profile.high_score = player.score
-                profile.save()
-            except UserProfile.DoesNotExist:
-                pass
+        # Update UserProfile stats based on game results purely in Redis
+        for player in room.players.select_related('user').all():
+            user = player.user
+            cache_key = get_profile_cache_key(user.user_id)
+            
+            # Get current stats from Redis (or DB if miss)
+            stats = cache.get(cache_key)
+            if stats is None:
+                stats = refresh_user_profile_cache(user)
+                
+            # Parse stats
+            games_played = int(stats.get("games_played", 0))
+            total_score = float(stats.get("total_score", 0.0))
+            high_score = float(stats.get("high_score", 0.0))
+            
+            # Increment
+            stats["games_played"] = games_played + 1
+            stats["total_score"] = total_score + player.score
+            if player.score > high_score:
+                stats["high_score"] = player.score
+                
+            # Write back to Redis
+            cache.set(cache_key, stats, timeout=2592000) # 30 days
+            
+            # Mark user as dirty so the sync task grabs them
+            cache.sadd("profiles:dirty", str(user.user_id))
                 
         return list(leaderboard)

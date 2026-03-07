@@ -2,13 +2,14 @@ from django.core.cache import cache
 from game.models import Player, Guess
 from userprofile.models import UserProfile
 
-def get_user_profile_data(user):
+def get_profile_cache_key(user_id):
+    return f"profile:{user_id}"
+
+def refresh_user_profile_cache(user):
     """
-    Returns a dictionary of user data suitable for profile display.
-    Handles both guest and permanent users.
+    Reads the UserProfile from the database and writes its stats to a Redis hash.
+    Also ensures the profile is tracked in the dirty set for eventual sync.
     """
-    
-    # 1. Fetch Profile Stats
     try:
         profile = user.profile
         stats = {
@@ -19,9 +20,37 @@ def get_user_profile_data(user):
     except UserProfile.DoesNotExist:
         stats = {
             "games_played": 0,
-            "total_score": 0,
-            "high_score": 0
+            "total_score": 0.0,
+            "high_score": 0.0
         }
+    
+    # Write to Redis Hash
+    cache_key = get_profile_cache_key(user.user_id)
+    cache.set(cache_key, stats, timeout=2592000) # 30 days
+    return stats
+
+
+def get_user_profile_data(user):
+    """
+    Returns a dictionary of user data suitable for profile display.
+    Handles both guest and permanent users.
+    Reads statistics from Redis caching layer first.
+    """
+    
+    # 1. Fetch Profile Stats from Redis
+    cache_key = get_profile_cache_key(user.user_id)
+    stats = cache.get(cache_key)
+    
+    # Cache miss (e.g., redis restarted, or first API call before cache warm)
+    if stats is None:
+        stats = refresh_user_profile_cache(user)
+    # stats is now populated either from Redis or DB fallback
+    # Convert numerical strings back to floats/ints if they came from Redis string hash
+    stats = {
+        "games_played": int(stats.get("games_played", 0)),
+        "total_score": float(stats.get("total_score", 0.0)),
+        "high_score": float(stats.get("high_score", 0.0))
+    }
 
     # 2. Fetch Recent Game History
     # We look up Player records associated with this user, ordered by most recently joined
