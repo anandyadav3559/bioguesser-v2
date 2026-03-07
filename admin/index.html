@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BioGuesser Admin — Animal Review</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --surface2: #1e2530;
+        --border: #30363d;
+        --accent: #58a6ff;
+        --accent-hover: #79beff;
+        --green: #3fb950;
+        --red: #f85149;
+        --yellow: #e3b341;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --radius: 12px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ── Header ── */
+      header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 28px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      header .logo {
+        font-size: 20px;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--accent), #a371f7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      header .subtitle {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      /* ── Layout ── */
+      .app {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        height: calc(100vh - 61px);
+      }
+
+      /* ── Sidebar ── */
+      .sidebar {
+        width: 300px;
+        min-width: 260px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+      }
+      .tab {
+        flex: 1;
+        padding: 12px 6px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .tab.active {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      .tab:hover {
+        color: var(--text);
+      }
+      .tab .count {
+        display: inline-block;
+        background: var(--surface2);
+        border-radius: 999px;
+        padding: 1px 7px;
+        font-size: 11px;
+        margin-left: 4px;
+        color: var(--muted);
+      }
+      .tab.active .count {
+        background: rgba(88, 166, 255, 0.15);
+        color: var(--accent);
+      }
+
+      .animal-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+        position: relative;
+      }
+      .animal-list::-webkit-scrollbar {
+        width: 6px;
+      }
+      .animal-list::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .animal-list::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+
+      /* ── Batch Actions ── */
+      .batch-header {
+        padding: 10px 14px;
+        display: none; /* hidden by default, shown if pending tab */
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+      .batch-header.visible {
+        display: flex;
+      }
+      .batch-header input[type="checkbox"] {
+        margin-right: auto;
+        cursor: pointer;
+        width: 14px;
+        height: 14px;
+      }
+      .batch-btn {
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.1s;
+      }
+      .batch-btn:hover:not(:disabled) {
+        background: var(--border);
+      }
+      .batch-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .batch-btn.approve-btn { color: var(--green); border-color: rgba(63, 185, 80, 0.4); }
+      .batch-btn.reject-btn { color: var(--red); border-color: rgba(248, 81, 73, 0.4); }
+
+      .animal-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background 0.15s;
+        border: 1px solid transparent;
+        margin-bottom: 4px;
+      }
+      .animal-card:hover {
+        background: var(--surface2);
+      }
+      .animal-card.selected {
+        background: var(--surface2);
+        border-color: var(--accent);
+      }
+      .animal-card input[type="checkbox"] {
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+      .animal-card img {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: var(--surface2);
+        flex-shrink: 0;
+      }
+      .animal-card .info {
+        flex: 1;
+        min-width: 0;
+      }
+      .animal-card .name {
+        font-size: 14px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .animal-card .sci {
+        font-size: 11px;
+        color: var(--muted);
+        font-style: italic;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .status-dot.pending {
+        background: var(--yellow);
+      }
+      .status-dot.approved {
+        background: var(--green);
+      }
+      .status-dot.rejected {
+        background: var(--red);
+      }
+
+      .empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .loading {
+        text-align: center;
+        padding: 30px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      /* ── Detail Panel ── */
+      .detail-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .detail-header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 20px 28px;
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+      }
+      .detail-header img {
+        width: 160px;
+        height: 160px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: var(--surface2);
+        flex-shrink: 0;
+        border: 1px solid var(--border);
+      }
+      .detail-header .meta {
+        flex: 1;
+      }
+      .detail-header .animal-name {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .detail-header .animal-sci {
+        font-size: 14px;
+        color: var(--muted);
+        font-style: italic;
+        margin-bottom: 10px;
+      }
+      .detail-header .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .status-badge.pending {
+        background: rgba(227, 179, 65, 0.15);
+        color: var(--yellow);
+      }
+      .status-badge.approved {
+        background: rgba(63, 185, 80, 0.15);
+        color: var(--green);
+      }
+      .status-badge.rejected {
+        background: rgba(248, 81, 73, 0.15);
+        color: var(--red);
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .btn {
+        padding: 8px 20px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition:
+          opacity 0.15s,
+          transform 0.1s;
+      }
+      .btn:hover {
+        opacity: 0.85;
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .btn-approve {
+        background: var(--green);
+        color: #0d1117;
+      }
+      .btn-reject {
+        background: var(--red);
+        color: #fff;
+      }
+      .btn-delete {
+        background: var(--surface2);
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
+
+      .detail-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px 28px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-content: start;
+      }
+      .detail-body::-webkit-scrollbar {
+        width: 6px;
+      }
+      .detail-body::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px;
+      }
+      .card.full {
+        grid-column: 1 / -1;
+      }
+      .card h3 {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--muted);
+        margin-bottom: 14px;
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .stat {
+      }
+      .stat .label {
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 3px;
+      }
+      .stat .value {
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .chars-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .chars-table td {
+        padding: 7px 6px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      .chars-table td:first-child {
+        color: var(--muted);
+        width: 45%;
+        font-size: 12px;
+      }
+      .chars-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      #map {
+        width: 100%;
+        height: 280px;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .placeholder {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        gap: 12px;
+      }
+      .placeholder svg {
+        opacity: 0.3;
+      }
+      .placeholder p {
+        font-size: 14px;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #fff;
+        z-index: 1000;
+        opacity: 0;
+        transform: translateY(10px);
+        transition:
+          opacity 0.3s,
+          transform 0.3s;
+        pointer-events: none;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .toast.success {
+        background: var(--green);
+        color: #0d1117;
+      }
+      .toast.error {
+        background: var(--red);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <div class="logo">🌿 BioGuesser Admin</div>
+        <div class="subtitle">Animal Review Queue</div>
+      </div>
+    </header>
+
+    <div class="app">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="tabs">
+          <div
+            class="tab active"
+            data-status="pending"
+            onclick="switchTab('pending')"
+          >
+            Pending <span class="count" id="count-pending">0</span>
+          </div>
+          <div
+            class="tab"
+            data-status="approved"
+            onclick="switchTab('approved')"
+          >
+            Approved <span class="count" id="count-approved">0</span>
+          </div>
+          <div
+            class="tab"
+            data-status="rejected"
+            onclick="switchTab('rejected')"
+          >
+            Rejected <span class="count" id="count-rejected">0</span>
+          </div>
+        </div>
+        <div class="batch-header" id="batch-header">
+          <input type="checkbox" id="select-all" onclick="toggleSelectAll(this.checked)" title="Select All" />
+          <button class="batch-btn approve-btn" id="batch-approve-btn" onclick="batchApprove()" disabled>Approve (0)</button>
+          <button class="batch-btn reject-btn" id="batch-reject-btn" onclick="batchReject()" disabled>Reject (0)</button>
+        </div>
+        <div class="animal-list" id="animal-list">
+          <div class="loading">Loading…</div>
+        </div>
+      </aside>
+
+      <!-- Detail Panel -->
+      <main class="detail-panel" id="detail-panel">
+        <div class="placeholder">
+          <svg
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 12h8M12 8v8" />
+          </svg>
+          <p>Select an animal from the list to review</p>
+        </div>
+      </main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+      const API = "http://localhost:8001";
+      let currentStatus = "pending";
+      let selectedId = null;
+      let map = null;
+      let allAnimals = { pending: [], approved: [], rejected: [] };
+      let checkedAnimals = new Set(); // holds IDs of checked animals
+
+      // ── Toast ─────────────────────────────────────────────────────────────────
+      function showToast(msg, type = "success") {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = `toast ${type} show`;
+        setTimeout(() => {
+          t.className = "toast";
+        }, 3000);
+      }
+
+      // ── Tabs ──────────────────────────────────────────────────────────────────
+      function switchTab(status) {
+        currentStatus = status;
+        selectedId = null;
+        document
+          .querySelectorAll(".tab")
+          .forEach((t) =>
+            t.classList.toggle("active", t.dataset.status === status),
+          );
+        resetDetail();
+        checkedAnimals.clear();
+        updateBatchUI();
+        
+        // Show batch header only for pending
+        document.getElementById('batch-header').classList.toggle('visible', status === 'pending');
+        
+        loadAnimals(status);
+      }
+
+      // ── Load List ─────────────────────────────────────────────────────────────
+      async function loadAnimals(status) {
+        const list = document.getElementById("animal-list");
+        list.innerHTML = '<div class="loading">Loading…</div>';
+        try {
+          const res = await fetch(`${API}/animals?status=${status}`);
+          const data = await res.json();
+          allAnimals[status] = data;
+          document.getElementById(`count-${status}`).textContent = data.length;
+          checkedAnimals.clear(); // clear selection on reload
+          updateBatchUI();
+          renderList(data, status);
+        } catch (e) {
+          list.innerHTML =
+            '<div class="empty">⚠️ Could not reach API.<br>Is the server running on port 8001?</div>';
+        }
+      }
+
+      function renderList(animals, status) {
+        const list = document.getElementById("animal-list");
+        if (!animals.length) {
+          list.innerHTML = `<div class="empty">No ${status} animals</div>`;
+          return;
+        }
+        list.innerHTML = animals
+          .map(
+            (a) => `
+    <div class="animal-card ${a.id === selectedId ? "selected" : ""}" id="card-${a.id}" onclick="selectAnimal('${a.id}')">
+      ${status === 'pending' ? `<input type="checkbox" class="animal-checkbox" onclick="event.stopPropagation(); toggleCheck('${a.id}', this.checked)" ${checkedAnimals.has(a.id) ? 'checked' : ''} />` : ''}
+      <img src="${a.image_url || ""}" onerror="this.src=''" alt="${a.name}"
+           style="${!a.image_url ? "background:#1e2530;" : ""}"/>
+      <div class="info">
+        <div class="name">${a.name}</div>
+        <div class="sci">${a.scientific_name || "—"}</div>
+      </div>
+      <div class="status-dot ${status}"></div>
+    </div>
+  `,
+          )
+          .join("");
+      }
+
+      // ── Batch Selection ───────────────────────────────────────────────────────
+      function toggleCheck(id, isChecked) {
+        if (isChecked) checkedAnimals.add(id);
+        else checkedAnimals.delete(id);
+        updateBatchUI();
+      }
+
+      function toggleSelectAll(isChecked) {
+        const checkboxes = document.querySelectorAll('.animal-checkbox');
+        checkboxes.forEach(cb => {
+          cb.checked = isChecked;
+          // Extract ID from the parent card's ID
+          const id = cb.closest('.animal-card').id.replace('card-', '');
+          if (isChecked) checkedAnimals.add(id);
+          else checkedAnimals.delete(id);
+        });
+        updateBatchUI();
+      }
+
+      function updateBatchUI() {
+        const count = checkedAnimals.size;
+        const totalPending = allAnimals['pending'] ? allAnimals['pending'].length : 0;
+        
+        const selectAllCb = document.getElementById('select-all');
+        if (selectAllCb) {
+           selectAllCb.checked = count > 0 && count === totalPending;
+           selectAllCb.indeterminate = count > 0 && count < totalPending;
+        }
+
+        const approveBtn = document.getElementById('batch-approve-btn');
+        const rejectBtn = document.getElementById('batch-reject-btn');
+        
+        if (approveBtn) {
+            approveBtn.textContent = `Approve (${count})`;
+            approveBtn.disabled = count === 0;
+        }
+        if (rejectBtn) {
+            rejectBtn.textContent = `Reject (${count})`;
+            rejectBtn.disabled = count === 0;
+        }
+      }
+
+      // ── Select + Detail ───────────────────────────────────────────────────────
+      async function selectAnimal(id) {
+        selectedId = id;
+        document
+          .querySelectorAll(".animal-card")
+          .forEach((c) =>
+            c.classList.toggle("selected", c.id === `card-${id}`),
+          );
+
+        const panel = document.getElementById("detail-panel");
+        panel.innerHTML = '<div class="placeholder"><p>Loading…</p></div>';
+
+        try {
+          const res = await fetch(`${API}/animals/${id}`);
+          const a = await res.json();
+          renderDetail(a);
+        } catch {
+          panel.innerHTML =
+            '<div class="placeholder"><p>Failed to load details.</p></div>';
+        }
+      }
+
+      function renderDetail(a) {
+        const panel = document.getElementById("detail-panel");
+        const chars = a.characteristics || {};
+        const locs = a.locations || [];
+
+        const charRows = [
+          ["Habitat", chars.habitat],
+          ["Prey", chars.prey],
+          ["Predators", chars.predators],
+          ["Lifespan", chars.lifespan],
+          ["Weight", chars.weight],
+          ["Length", chars.length],
+          ["Top Speed", chars.top_speed],
+          ["Skin Type", chars.skin_type],
+          ["Color", chars.color],
+          ["Gestation Period", chars.gestation_period],
+          ["Average Litter Size", chars.average_litter_size],
+          ["Age of Sexual Maturity", chars.age_of_sexual_maturity],
+          ["Age of Weaning", chars.age_of_weaning],
+        ]
+          .filter(([, v]) => v)
+          .map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`)
+          .join("");
+
+        const canAct = a.status === "pending";
+
+        panel.innerHTML = `
+    <div class="detail-header">
+      <img src="${a.image_url || ""}" onerror="this.src=''" alt="${a.name}"
+           style="${!a.image_url ? "background:#1e2530;" : ""}"/>
+      <div class="meta">
+        <div class="animal-name">${a.name}</div>
+        <div class="animal-sci">${a.scientific_name || "Unknown"}</div>
+        <span class="status-badge ${a.status}">${a.status}</span>
+        <div class="actions">
+          <button class="btn btn-approve" onclick="approve('${a.id}','${a.name}')" ${canAct ? "" : "disabled"}>✓ Approve</button>
+          <button class="btn btn-reject" onclick="reject('${a.id}','${a.name}')" ${canAct ? "" : "disabled"}>✕ Reject</button>
+          <button class="btn btn-delete" onclick="deleteAnimal('${a.id}','${a.name}')">🗑 Delete</button>
+        </div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div class="card">
+        <h3>Stats</h3>
+        <div class="stat-grid">
+          <div class="stat"><div class="label">Max Probability</div><div class="value">${a.max_probability != null ? a.max_probability.toFixed(4) : "—"}</div></div>
+          <div class="stat"><div class="label">Entropy</div><div class="value">${a.entropy != null ? a.entropy.toFixed(4) : "—"}</div></div>
+          <div class="stat"><div class="label">Location Clusters</div><div class="value">${locs.length}</div></div>
+          <div class="stat"><div class="label">Total Sightings</div><div class="value">${locs.reduce((s, l) => s + (l.count || 0), 0).toLocaleString()}</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Characteristics</h3>
+        ${charRows ? `<table class="chars-table">${charRows}</table>` : '<div style="color:var(--muted);font-size:13px">No characteristics available</div>'}
+      </div>
+      <div class="card full">
+        <h3>Location Clusters (${locs.length})</h3>
+        <div id="map"></div>
+      </div>
+    </div>
+  `;
+
+        // Init map after DOM update
+        setTimeout(() => initMap(locs), 50);
+      }
+
+      // ── Map ───────────────────────────────────────────────────────────────────
+      function initMap(locations) {
+        if (map) {
+          map.remove();
+          map = null;
+        }
+
+        map = new maplibregl.Map({
+          container: "map",
+          style: {
+            version: 8,
+            sources: {
+              osm: {
+                type: "raster",
+                tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+                tileSize: 256,
+                attribution: "© OpenStreetMap contributors",
+              },
+            },
+            layers: [{ id: "osm", type: "raster", source: "osm" }],
+          },
+          center: [0, 20],
+          zoom: 1,
+        });
+
+        map.on("load", () => {
+          if (!locations.length) return;
+
+          const features = locations.map((l) => ({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [l.longitude, l.latitude] },
+            properties: { count: l.count || 1 },
+          }));
+
+          map.addSource("locs", {
+            type: "geojson",
+            data: { type: "FeatureCollection", features },
+          });
+
+          // Heatmap-style circles sized by count
+          map.addLayer({
+            id: "locs-circle",
+            type: "circle",
+            source: "locs",
+            paint: {
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["get", "count"],
+                1,
+                6,
+                100,
+                16,
+                500,
+                26,
+              ],
+              "circle-color": "#58a6ff",
+              "circle-opacity": 0.75,
+              "circle-stroke-color": "#fff",
+              "circle-stroke-width": 1.5,
+            },
+          });
+
+          // Tooltip
+          map.on("mouseenter", "locs-circle", (e) => {
+            map.getCanvas().style.cursor = "pointer";
+            const count = e.features[0].properties.count;
+            new maplibregl.Popup({
+              closeButton: false,
+              closeOnClick: false,
+              offset: 12,
+            })
+              .setLngLat(e.features[0].geometry.coordinates)
+              .setHTML(`<strong>${count.toLocaleString()}</strong> sightings`)
+              .addTo(map);
+          });
+          map.on("mouseleave", "locs-circle", () => {
+            map.getCanvas().style.cursor = "";
+            document
+              .querySelectorAll(".maplibregl-popup")
+              .forEach((p) => p.remove());
+          });
+
+          // Fit bounds
+          const lngs = locations.map((l) => l.longitude);
+          const lats = locations.map((l) => l.latitude);
+          map.fitBounds(
+            [
+              [Math.min(...lngs) - 5, Math.min(...lats) - 5],
+              [Math.max(...lngs) + 5, Math.max(...lats) + 5],
+            ],
+            { padding: 30, maxZoom: 8 },
+          );
+        });
+      }
+
+      // ── Actions ───────────────────────────────────────────────────────────────
+      async function approve(id, name) {
+        if (!confirm(`Approve "${name}" and add to the main database?`)) return;
+        try {
+          const res = await fetch(`${API}/animals/${id}/approve`, {
+            method: "POST",
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Error");
+          showToast(`✅ ${name} approved!`);
+          refreshAfterAction(id);
+        } catch (e) {
+          showToast(e.message, "error");
+        }
+      }
+
+      async function reject(id, name) {
+        if (!confirm(`Reject "${name}"?`)) return;
+        try {
+          const res = await fetch(`${API}/animals/${id}/reject`, {
+            method: "POST",
+          });
+          if (!res.ok) throw new Error("Failed");
+          showToast(`❌ ${name} rejected.`);
+          refreshAfterAction(id);
+        } catch (e) {
+          showToast(e.message, "error");
+        }
+      }
+
+      async function batchApprove() {
+        const ids = Array.from(checkedAnimals);
+        if (ids.length === 0) return;
+        if (!confirm(`Approve ${ids.length} selected animals and add them to the main database?`)) return;
+        
+        try {
+          const res = await fetch(`${API}/animals/batch-approve`, {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ animal_ids: ids })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Error");
+          
+          showToast(`✅ ${data.message || 'Batch approved successfully!'}`);
+          refreshAfterAction();
+        } catch (e) {
+          showToast(e.message, "error");
+        }
+      }
+
+      async function batchReject() {
+        const ids = Array.from(checkedAnimals);
+        if (ids.length === 0) return;
+        if (!confirm(`Reject ${ids.length} selected animals?`)) return;
+        
+        try {
+          const res = await fetch(`${API}/animals/batch-reject`, {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ animal_ids: ids })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Error");
+          
+          showToast(`❌ ${data.message || 'Batch rejected.'}`);
+          refreshAfterAction();
+        } catch (e) {
+          showToast(e.message, "error");
+        }
+      }
+
+      async function deleteAnimal(id, name) {
+        if (!confirm(`Permanently delete "${name}" from staging?`)) return;
+        try {
+          const res = await fetch(`${API}/animals/${id}`, { method: "DELETE" });
+          if (!res.ok) throw new Error("Failed");
+          showToast(`🗑 ${name} deleted.`);
+          refreshAfterAction(id);
+        } catch (e) {
+          showToast(e.message, "error");
+        }
+      }
+
+      function refreshAfterAction(removedId) {
+        resetDetail();
+        selectedId = null;
+        // Reload all tabs to keep counts fresh
+        loadAnimals("pending");
+        loadAnimals("approved");
+        loadAnimals("rejected");
+      }
+
+      function resetDetail() {
+        if (map) {
+          map.remove();
+          map = null;
+        }
+        document.getElementById("detail-panel").innerHTML = `
+    <div class="placeholder">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>
+      </svg>
+      <p>Select an animal from the list to review</p>
+    </div>`;
+      }
+
+      // ── Init ──────────────────────────────────────────────────────────────────
+      loadAnimals("pending");
+      loadAnimals("approved");
+      loadAnimals("rejected");
+    </script>
+  </body>
+</html>

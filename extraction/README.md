@@ -26,22 +26,22 @@ fetch_animal_details()          ← API Ninjas (characteristics)
 fetch_observations()            ← iNaturalist (GPS sightings)
     │
     ▼
-H3 clustering (resolution 2)   ← ~158 km edge-length cells
+H3 clustering (resolution 2)    ← ~158 km edge-length cells
     │
     ▼
-insert_animal_data()            ← PostgreSQL
+insert_animal_data()            ← PostgreSQL (determines table based on --staging)
     │
-    ▼
-animals / animal_characteristics / animal_locations tables
+    ├─► (Production Mode)  ➔ animals / animal_characteristics / animal_locations
+    └─► (Staging Mode)     ➔ staging_animals / staging_animal_characteristics / staging_animal_locations
 ```
 
 ---
 
 ## Database Schema Created
 
-The script creates three tables if they don't exist:
+The script creates three tables if they don't exist. If run with the `--staging` flag, it creates prepended tables (e.g., `staging_animals`) with an extra `status` column to hold data for administrative review.
 
-### `animals`
+### `animals` / `staging_animals`
 
 | Column            | Type               | Notes                                                        |
 | ----------------- | ------------------ | ------------------------------------------------------------ |
@@ -124,8 +124,11 @@ docker compose up -d
 echo "Lion" >> animals.txt
 echo "African Elephant" >> animals.txt
 
-# 3. Run ingestion
+# 3. Run ingestion (Production)
 python ingest_Data.py
+
+# OR Run ingestion into Staging (Admin Review required)
+python ingest_Data.py --staging
 ```
 
 The script is **resumable**: it checks if an animal already exists in the DB before making API calls, and removes successfully processed animals from `animals.txt` so re-runs skip them.

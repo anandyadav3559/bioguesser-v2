@@ -10,6 +10,8 @@ A full-stack probabilistic animal-habitat guessing game. Players are shown an an
 graph TD
     U[User / Browser] -->|HTTPS REST| B[Django Backend :8000]
     U -->|WebSocket wss://| WS[Django Channels]
+    A[Admin User] -->|HTTPS| ADM[Admin FastAPI :8001]
+    ADM -->|psycopg| PG
     B -->|ORM| PG[(PostgreSQL)]
     B -->|Cache / Sessions| RD[(Redis)]
     WS -->|Channel Layer| RD
@@ -18,9 +20,10 @@ graph TD
     subgraph Frontend [React + Vite :5173]
         U
     end
-    subgraph Backend [Django 6 + DRF]
+    subgraph Backend [Django + FastAPI]
         B
         WS
+        ADM
     end
 ```
 
@@ -88,9 +91,10 @@ geoguesser-v2/
 │   ├── multiplayer/           ← WebSocket consumers (Django Channels)
 │   └── backend/               ← Django settings, urls, asgi/wsgi
 ├── frontend/frontend/         ← React + Vite SPA
-│   └── src/
-│       ├── pages/             ← HomePage, LoginPage
-│       └── components/        ← GameMenu, GamePlay, AnimalCard, MapLibreMap, UserProfile
+│   ├── src/
+│   │   ├── pages/             ← HomePage, LoginPage
+│   │   └── components/        ← GameMenu, GamePlay, AnimalCard, MapLibreMap, UserProfile
+├── admin/                     ← Standalone FastAPI Admin Panel for reviewing staged animals
 └── extraction/                ← iNaturalist data ingestion scripts
 ```
 
@@ -142,7 +146,23 @@ npm run dev
 cd extraction
 uv pip install psycopg[binary] aiohttp python-dotenv h3
 # add animal names to animals.txt, then:
-uv run ingest_Data.py
+uv run python ingest_Data.py
+
+# Or seed data into staging for admin review:
+uv run python ingest_Data.py --staging
+```
+
+### 5. Admin Panel _(optional — review staged animals)_
+
+```bash
+uv pip install fastapi uvicorn
+# Start the backend API
+uv run uvicorn admin.server:app --port 8001 --reload
+
+# Start the frontend
+cd admin
+python -m http.server 3001
+# Open http://localhost:3001 in your browser
 ```
 
 ---
