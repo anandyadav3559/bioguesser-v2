@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import UserProfile from './UserProfile';
+import useIsMobile from '../hooks/useIsMobile';
 
 const GameMenu = ({
     selectedTime,
@@ -11,13 +12,15 @@ const GameMenu = ({
     setUserData
 }) => {
     const [activeTab, setActiveTab] = useState('singleplayer');
+    const isMobile = useIsMobile();
 
     const styles = {
         container: {
             display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
             width: '100%',
             maxWidth: '1200px',
-            height: '80vh',
+            height: isMobile ? '90vh' : '80vh',
             backgroundColor: 'rgba(20, 30, 40, 0.85)',
             borderRadius: '24px',
             overflow: 'hidden',
@@ -26,21 +29,25 @@ const GameMenu = ({
             border: '1px solid rgba(255,255,255,0.1)'
         },
         sidebar: {
-            width: '300px',
+            width: isMobile ? '100%' : '300px',
             backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            padding: '40px 20px',
+            padding: isMobile ? '20px 15px' : '40px 20px',
             display: 'flex',
-            flexDirection: 'column',
-            gap: '15px'
+            flexDirection: isMobile ? 'row' : 'column',
+            gap: '15px',
+            overflowX: isMobile ? 'auto' : 'visible',
+            whiteSpace: isMobile ? 'nowrap' : 'normal',
+            borderBottom: isMobile ? '1px solid rgba(255,255,255,0.1)' : 'none',
+            flexShrink: 0
         },
         mainContent: {
             flex: 1,
-            padding: '40px',
+            padding: isMobile ? '20px' : '40px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'stretch',
-            overflow: 'hidden'
+            overflow: 'auto'
         },
         menuButton: (isActive) => ({
             background: isActive ? 'linear-gradient(90deg, #2ecc71, #27ae60)' : 'transparent',
@@ -48,15 +55,17 @@ const GameMenu = ({
             padding: '15px 20px',
             borderRadius: '12px',
             color: 'white',
-            fontSize: '1.2rem',
+            fontSize: isMobile ? '1rem' : '1.2rem',
             fontWeight: 'bold',
-            textAlign: 'left',
+            textAlign: isMobile ? 'center' : 'left',
             cursor: 'pointer',
             transition: 'all 0.2s',
             opacity: isActive ? 1 : 0.7,
             display: 'flex',
             alignItems: 'center',
-            gap: '10px'
+            justifyContent: isMobile ? 'center' : 'flex-start',
+            gap: '10px',
+            whiteSpace: 'nowrap'
         }),
         disabledButton: {
             background: 'transparent',
@@ -64,14 +73,16 @@ const GameMenu = ({
             padding: '15px 20px',
             borderRadius: '12px',
             color: 'white',
-            fontSize: '1.2rem',
+            fontSize: isMobile ? '1rem' : '1.2rem',
             fontWeight: 'bold',
-            textAlign: 'left',
+            textAlign: isMobile ? 'center' : 'left',
             cursor: 'not-allowed',
             opacity: 0.3,
             display: 'flex',
             alignItems: 'center',
-            gap: '10px'
+            justifyContent: isMobile ? 'center' : 'flex-start',
+            gap: '10px',
+            whiteSpace: 'nowrap'
         }
     };
 

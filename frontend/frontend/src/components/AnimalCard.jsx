@@ -1,4 +1,5 @@
 import React from 'react';
+import useIsMobile from '../hooks/useIsMobile';
 
 const formatCharacteristics = (chars) => {
     if (!chars || chars.length === 0) return [];
@@ -27,26 +28,29 @@ const formatCharacteristics = (chars) => {
 
 const AnimalCard = ({ currentAnimal }) => {
     const characteristicsList = formatCharacteristics(currentAnimal.characteristics);
+    const isMobile = useIsMobile();
 
     return (
         <div style={{
             backgroundColor: 'white',
-            padding: '20px',
+            padding: isMobile ? '10px 15px' : '20px',
             borderRadius: '20px',
             boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
             width: '100%',
             height: '100%',
             overflowY: 'auto',
             boxSizing: 'border-box',
-            textAlign: 'center'
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column'
         }}>
-            <h2 style={{ color: '#2c3e50', margin: '0 0 10px 0' }}>{currentAnimal.name}</h2>
-            <p style={{ fontStyle: 'italic', color: '#7f8c8d', marginBottom: '15px' }}>{currentAnimal.scientific_name}</p>
+            <h2 style={{ color: '#2c3e50', margin: '0 0 5px 0', fontSize: isMobile ? '1.2rem' : '1.5rem' }}>{currentAnimal.name}</h2>
+            <p style={{ fontStyle: 'italic', color: '#7f8c8d', marginBottom: isMobile ? '10px' : '15px', fontSize: isMobile ? '0.9rem' : '1rem' }}>{currentAnimal.scientific_name}</p>
 
             {currentAnimal.image_url ? (
                 <div style={{
                     width: '100%',
-                    height: '220px',
+                    height: isMobile ? '140px' : '220px',
                     borderRadius: '12px',
                     overflow: 'hidden',
                     backgroundColor: '#f0f0f0',
@@ -54,7 +58,7 @@ const AnimalCard = ({ currentAnimal }) => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    marginBottom: '15px'
+                    marginBottom: isMobile ? '10px' : '15px'
                 }}>
                     <img
                         src={currentAnimal.image_url}
@@ -65,16 +69,16 @@ const AnimalCard = ({ currentAnimal }) => {
             ) : (
                 <div style={{
                     width: '100%',
-                    height: '220px',
+                    height: isMobile ? '140px' : '220px',
                     borderRadius: '12px',
                     backgroundColor: '#ecf0f1',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#95a5a6',
-                    fontSize: '1.2rem',
+                    fontSize: isMobile ? '1rem' : '1.2rem',
                     flexShrink: 0,
-                    marginBottom: '15px'
+                    marginBottom: isMobile ? '10px' : '15px'
                 }}>
                     No Image Available
                 </div>
@@ -84,15 +88,17 @@ const AnimalCard = ({ currentAnimal }) => {
                 <div style={{
                     textAlign: 'left',
                     backgroundColor: '#f8f9fa',
-                    padding: '15px',
+                    padding: isMobile ? '10px' : '15px',
                     borderRadius: '12px',
-                    marginTop: '15px',
-                    fontSize: '0.95rem',
+                    marginTop: 'auto',
+                    fontSize: isMobile ? '0.85rem' : '0.95rem',
                     color: '#34495e',
-                    border: '1px solid #e0e0e0'
+                    border: '1px solid #e0e0e0',
+                    flexGrow: 1,
+                    overflowY: 'auto' // Handle text overflow nicely internally if it's very long
                 }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>Characteristics:</h4>
-                    <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: '1.6' }}>
+                    <h4 style={{ margin: '0 0 8px 0', color: '#2c3e50', fontSize: isMobile ? '0.95rem' : '1rem' }}>Characteristics:</h4>
+                    <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: isMobile ? '1.4' : '1.6' }}>
                         {characteristicsList.map((sentence, idx) => (
                             <li key={idx}>{sentence}</li>
                         ))}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AnimalCard from './AnimalCard';
 import MapLibreMap from './MapLibreMap';
+import useIsMobile from '../hooks/useIsMobile';
 
 const GamePlay = ({
     selectedTime,
@@ -20,6 +21,8 @@ const GamePlay = ({
     const [roundScore, setRoundScore] = useState(null);
     const [guessSubmitted, setGuessSubmitted] = useState(false);
     const [trueLocations, setTrueLocations] = useState([]);
+
+    const isMobile = useIsMobile();
 
     // Auto-progress when round finishes
     useEffect(() => {
@@ -77,25 +80,29 @@ const GamePlay = ({
         <div style={{
             zIndex: 2,
             display: 'flex',
-            flexDirection: 'row',
+            flexDirection: isMobile ? 'column' : 'row',
             width: '100%',
             height: '100%',
-            gap: '20px'
+            gap: isMobile ? '10px' : '20px',
+            padding: isMobile ? '10px 0' : '0' // Slight padding adjustment for mobile overall
         }}>
-            {/* LEFT COLUMN: Animal Card */}
+            {/* LEFT/TOP COLUMN: Animal Card */}
             <div style={{
-                width: '400px',
+                width: isMobile ? '100%' : '400px',
                 flexShrink: 0,
-                height: '100%'
+                height: isMobile ? '40%' : '100%',
+                maxHeight: isMobile ? '350px' : 'none',
+                minHeight: isMobile ? '200px' : 'auto'
             }}>
                 {currentAnimal && <AnimalCard currentAnimal={currentAnimal} />}
             </div>
 
-            {/* RIGHT COLUMN: Map and Overlays */}
+            {/* RIGHT/BOTTOM COLUMN: Map and Overlays */}
             <div style={{
                 flex: 1,
                 position: 'relative',
-                height: '100%',
+                height: isMobile ? 'auto' : '100%',
+                minHeight: isMobile ? '40vh' : 'auto', // ensure it takes up enough screen space
                 borderRadius: '20px',
                 overflow: 'hidden',
                 backgroundColor: '#bdc3c7',
