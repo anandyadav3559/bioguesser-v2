@@ -15,6 +15,7 @@ const HomePage = () => {
     const [loading, setLoading] = useState(false);
     const [preloadingNext, setPreloadingNext] = useState(false);
     const [nextAnimal, setNextAnimal] = useState(null);
+    const [userData, setUserData] = useState(null);
 
     const nextAnimalImageRef = useRef(new Image());
 
@@ -31,12 +32,23 @@ const HomePage = () => {
 
     const [roomCode, setRoomCode] = useState(null);
 
-    // ── Preload animals as soon as the page mounts ──────────────────────────
+    // ── Preload animals and user data as soon as the page mounts ──────────────────────────
     useEffect(() => {
-        const fetchInitialAnimals = async () => {
+        const fetchInitialData = async () => {
             try {
-                const response = await api.get('/animal/batch/?limit=10&ordering=random');
-                const animals = response.data;
+                // Fetch both animals and user data concurrently
+                const [animalsResponse, userResponse] = await Promise.all([
+                    api.get('/animal/batch/?limit=10&ordering=random'),
+                    api.get('/auth/me/')
+                ]);
+
+                // Handle User Data
+                if (userResponse.data) {
+                    setUserData(userResponse.data);
+                }
+
+                // Handle Animals
+                const animals = animalsResponse.data;
                 if (animals && animals.length > 0) {
                     const stack = [...animals];
                     const first = stack.shift();
@@ -50,10 +62,10 @@ const HomePage = () => {
                     if (stack.length > 0) preloadNextAnimal(stack[0]);
                 }
             } catch (err) {
-                console.error('Failed to prefetch animals:', err);
+                console.error('Failed to prefetch initial data:', err);
             }
         };
-        fetchInitialAnimals();
+        fetchInitialData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -178,6 +190,8 @@ const HomePage = () => {
                     startSinglePlayer={startSinglePlayer}
                     loading={loading}
                     handleLogout={handleLogout}
+                    userData={userData}
+                    setUserData={setUserData}
                 />
             )}
         </div>

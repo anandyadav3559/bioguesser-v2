@@ -5,6 +5,9 @@ from userprofile.models import UserProfile
 def get_profile_cache_key(user_id):
     return f"profile:{user_id}"
 
+def get_full_profile_cache_key(user_id):
+    return f"profile_full:{user_id}"
+
 def refresh_user_profile_cache(user):
     """
     Reads the UserProfile from the database and writes its stats to a Redis hash.
@@ -36,6 +39,10 @@ def get_user_profile_data(user):
     Handles both guest and permanent users.
     Reads statistics from Redis caching layer first.
     """
+    full_cache_key = get_full_profile_cache_key(user.user_id)
+    cached_full_profile = cache.get(full_cache_key)
+    if cached_full_profile:
+        return cached_full_profile
     
     # 1. Fetch Profile Stats from Redis
     cache_key = get_profile_cache_key(user.user_id)
@@ -105,4 +112,5 @@ def get_user_profile_data(user):
             "email": user.email
         })
 
+    cache.set(full_cache_key, base_data, timeout=2592000) # 30 days
     return base_data

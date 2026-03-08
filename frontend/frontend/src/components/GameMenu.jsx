@@ -6,7 +6,9 @@ const GameMenu = ({
     setSelectedTime,
     startSinglePlayer,
     loading,
-    handleLogout
+    handleLogout,
+    userData,
+    setUserData
 }) => {
     const [activeTab, setActiveTab] = useState('singleplayer');
 
@@ -185,7 +187,7 @@ const GameMenu = ({
                     {activeTab === 'profile' && (
                         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
                             {/* Repurposed UserProfile specifically engineered to visually sit here */}
-                            <UserProfile handleLogout={handleLogout} inlineMode={true} />
+                            <UserProfile handleLogout={handleLogout} inlineMode={true} userData={userData} setUserData={setUserData} />
                         </div>
                     )}
                 </div>

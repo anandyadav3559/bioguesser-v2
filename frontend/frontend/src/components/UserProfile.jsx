@@ -1,28 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 
-const UserProfile = ({ handleLogout, inlineMode = false }) => {
-    const [userData, setUserData] = useState(null);
+const UserProfile = ({ handleLogout, inlineMode = false, userData, setUserData }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [newUsername, setNewUsername] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // Sync newUsername when userData becomes available or changes
     useEffect(() => {
-        fetchUserData();
-    }, []);
-
-    const fetchUserData = async () => {
-        try {
-            const response = await api.get('/auth/me/');
-            setUserData(response.data);
-            setNewUsername(response.data.username);
-        } catch (err) {
-            console.error("Failed to fetch user data:", err);
-            setError("Could not load profile.");
+        if (userData?.username) {
+            setNewUsername(userData.username);
         }
-    };
+    }, [userData]);
 
     const handleUpdateUsername = async (e) => {
         e.preventDefault();

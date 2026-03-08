@@ -9,7 +9,7 @@ from django.core.cache import cache
 from game.models import Room, Player, Round, Guess
 from animal.models import Animal, AnimalLocation
 from userprofile.models import UserProfile
-from authentication.services import get_profile_cache_key, refresh_user_profile_cache
+from authentication.services import get_profile_cache_key, get_full_profile_cache_key, refresh_user_profile_cache
 
 class GameService:
     
@@ -235,5 +235,9 @@ class GameService:
             
             # Mark user as dirty so the sync task grabs them
             cache.sadd("profiles:dirty", str(user.user_id))
+
+            # Invalidate the full profile cache so the new game appears in history
+            full_cache_key = get_full_profile_cache_key(user.user_id)
+            cache.delete(full_cache_key)
                 
         return list(leaderboard)
