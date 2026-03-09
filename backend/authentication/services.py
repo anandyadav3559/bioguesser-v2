@@ -59,14 +59,24 @@ def get_user_profile_data(user):
         "high_score": float(stats.get("high_score", 0.0))
     }
 
+    from django.db.models import Prefetch
+
     # 2. Fetch Recent Game History
-    # We look up Player records associated with this user, ordered by most recently joined
-    recent_players = Player.objects.filter(user=user).select_related('room').order_by('-joined_at')[:10]
+    # We look up Player records associated with this user, ordered by most recently joined,
+    # and prefetch all necessary related objects to avoid N+1 query problems.
+    recent_players = Player.objects.filter(user=user).select_related(
+        'room'
+    ).prefetch_related(
+        Prefetch(
+            'guesses',
+            queryset=Guess.objects.select_related('round__animal').order_by('round__round_number')
+        )
+    ).order_by('-joined_at')[:10]
     
     history = []
     for p in recent_players:
-        # Get all their guesses for this room
-        guesses = Guess.objects.filter(player=p).select_related('round__animal').order_by('round__round_number')
+        # iterate over prefetched guesses
+        guesses = p.guesses.all()
         
         rounds_data = []
         for g in guesses:
