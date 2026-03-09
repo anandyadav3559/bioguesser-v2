@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import UserProfile from './UserProfile';
+import BioExplorer from './BioExplorer';
 import useIsMobile from '../hooks/useIsMobile';
 
 const GameMenu = ({
@@ -116,13 +117,16 @@ const GameMenu = ({
                         Custom Room <span style={{ fontSize: '0.8rem', backgroundColor: '#e74c3c', padding: '2px 6px', borderRadius: '4px' }}>Soon</span>
                     </button>
                     <button
+                        style={styles.menuButton(activeTab === 'bioexplorer')}
+                        onClick={() => setActiveTab('bioexplorer')}
+                    >
+                        Bio-Explorer
+                    </button>
+                    <button
                         style={styles.menuButton(activeTab === 'profile')}
                         onClick={() => setActiveTab('profile')}
                     >
                         Profile
-                    </button>
-                    <button style={styles.disabledButton} disabled>
-                        Bio-Explorer <span style={{ fontSize: '0.8rem', backgroundColor: '#e74c3c', padding: '2px 6px', borderRadius: '4px' }}>Soon</span>
                     </button>
                 </div>
 
@@ -199,6 +203,12 @@ const GameMenu = ({
                         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
                             {/* Repurposed UserProfile specifically engineered to visually sit here */}
                             <UserProfile handleLogout={handleLogout} inlineMode={true} userData={userData} setUserData={setUserData} />
+                        </div>
+                    )}
+
+                    {activeTab === 'bioexplorer' && (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '16px' }}>
+                            <BioExplorer />
                         </div>
                     )}
                 </div>

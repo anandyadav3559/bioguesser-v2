@@ -147,7 +147,7 @@ const LoginPage = () => {
                         borderRadius: '16px',
                         boxShadow: '0 10px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.15)', // Better shadow + subtle border
                         backdropFilter: 'blur(10px)',
-                        webkitBackdropFilter: 'blur(10px)',
+                        WebkitBackdropFilter: 'blur(10px)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',

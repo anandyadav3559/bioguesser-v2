@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/auth/', include('authentication.urls')), 
     path('api/animal/', include('animal.urls')),
     path('api/game/', include('game.urls')),
+    path('api/bioExplorer/', include('bioExplorer.urls')),
 ]
